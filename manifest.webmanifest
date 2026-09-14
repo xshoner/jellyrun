@@ -1,0 +1,16 @@
+{
+  "name": "지각만큼은 안돼!",
+  "short_name": "젤리런",
+  "description": "젤리를 모으고 장애물을 피하며 최고 기록에 도전하는 러닝 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#101510",
+  "theme_color": "#d6ff63",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+

@@ -6,6 +6,9 @@
     pirateAttack:'monster01 bomb.mp3', pirateFire:'monster01 bomb01.mp3',
     iceAim:'monster02 bomb00.mp3', iceCharge:'monster02 bomb01.mp3', iceFire:'moster02 bomb02.mp3', frozen:'ice status.mp3',
     baseballHit:'monster03 bomb.mp3', baseballFlight:'monster03 bomb01.mp3', stage:'next level.mp3',
+    pirateIntro:'monster01_intro.mp3', iceIntro:'monster02_intro.mp3', baseballIntro:'monster03_intro.mp3',
+    trapSingle:'crash.mp3', trapDouble:'croco.mp3', slide:'slide.mp3',
+    shout1:'shout01.mp3', shout2:'shout02.mp3', shout3:'shout03.mp3', shout4:'shout04.mp3', shout5:'shout05.mp3',
     shock1:'shock01.mp3', shock2:'shock02.mp3', shock3:'shock03.mp3'
   };
   const MUSIC = ['bgm001.mp3','bgm002.mp3','bmg003.mp3','bmg004.mp3'];

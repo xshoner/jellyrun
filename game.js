@@ -17,19 +17,23 @@ function deathAudio(){soundPlayer?.endRun('death')}
 let best=0;try{best=Number(localStorage.getItem('jelly-dash-best'))||0}catch{} $('best').textContent=best.toLocaleString();
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function load(key,path){return new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[key]=im;resolve()};im.onerror=()=>reject(new Error(path));im.src=path})}
-function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0}}
+function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0,lastShout:-10}}
 s=fresh();
 function tone(freq=600,duration=.08){if(!sound||soundPlayer?.master===0)return;try{audio ||=new(window.AudioContext||window.webkitAudioContext)();audio.resume();const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(freq*.65,audio.currentTime+duration);gain.gain.setValueAtTime(.055*(soundPlayer?.master??1),audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration)}catch{}}
 function toast(text){$('toast').textContent=text;s.toast=2.5;$('toast').style.opacity=1}
 function burst(x,y,color,n=20){for(let i=0;i<n;i++)s.fx.push({x,y,vx:rand(-160,160),vy:rand(-230,60),life:rand(.35,.8),max:.8,color,r:rand(2,6)})}
 function floating(text,x,y,color){s.fx.push({text,x,y,vx:0,vy:-65,life:1,max:1,color})}
 function blink(){s.p.blink=.9}
-function start(){if(!ready)return;s=fresh();s.mode='running';slideHeld=false;accumulator=0;$('overlay').classList.add('hidden');$('overlay').classList.remove('game-over');$('toast').style.opacity=0;document.querySelector('.arena').classList.add('playing');$('pause').disabled=false;$('pause').textContent='Ⅱ 일시정지';document.querySelector('.live').textContent='● NOW RUNNING';soundPlayer?.startRun();hud()}
+async function lockLandscape(){if(!globalThis.matchMedia?.('(max-width: 1000px)').matches)return;document.body?.classList?.add('game-active');try{if(!document.fullscreenElement)await document.documentElement?.requestFullscreen?.({navigationUI:'hide'});await globalThis.screen?.orientation?.lock?.('landscape')}catch{}finally{const hint=$('rotateHint');if(hint)hint.hidden=true}}
+function unlockLandscape(){document.body?.classList?.remove('game-active');try{globalThis.screen?.orientation?.unlock?.()}catch{}if(document.fullscreenElement)document.exitFullscreen?.().catch?.(()=>{})}
+function start(){if(!ready)return;s=fresh();s.mode='running';slideHeld=false;accumulator=0;$('overlay').classList.add('hidden');$('overlay').classList.remove('game-over');$('toast').style.opacity=0;document.querySelector('.arena').classList.add('playing');$('pause').disabled=false;$('pause').textContent='Ⅱ 일시정지';document.querySelector('.live').textContent='● NOW RUNNING';soundPlayer?.startRun();lockLandscape();hud()}
 function pause(){if(!['running','paused'].includes(s.mode))return;slideHeld=false;if(s.mode==='running'){s.mode='paused';soundPlayer?.pause();audio?.suspend?.();panel('잠깐,<br><em>쉬어가기.</em>','모험은 여기서 기다릴게요.','계속 달리기 →','TAKE A BREATHER');$('pause').textContent='▶ 계속하기'}else{s.mode='running';soundPlayer?.resume();audio?.resume?.();$('overlay').classList.add('hidden');$('pause').textContent='Ⅱ 일시정지'}}
 function panel(title,desc,button,eyebrow){$('title').innerHTML=title;$('description').textContent=desc;$('start').textContent=button;$('eyebrow').textContent=eyebrow;$('overlay').classList.remove('hidden');document.querySelector('.hero').style.display='none'}
-function finish(){s.mode='over';soundPlayer?.endRun('gameOver');s.shake=0;s.itemNotice=null;s.speech=null;$('toast').style.opacity=0;$('overlay').classList.add('game-over');best=Math.max(best,s.score);try{localStorage.setItem('jelly-dash-best',String(best))}catch{}$('best').textContent=best.toLocaleString();$('pause').disabled=true;document.querySelector('.arena').classList.remove('playing');panel(`<span class="result-label">FINAL SCORE</span><em class="result-score">${s.score.toLocaleString()}</em><span class="result-unit">POINTS</span>`,`${s.meters.toLocaleString()}m · 거리 ${s.meters.toLocaleString()}점 + 젤리 ${s.jellyScore.toLocaleString()}점 · ${formatTime(s.t)}`,'한 번 더 달리기 →','EVERY RUN IS A NEW ADVENTURE');document.querySelector('.live').textContent='● RUN COMPLETE'}
+function finish(){s.mode='over';soundPlayer?.endRun('gameOver');unlockLandscape();s.shake=0;s.itemNotice=null;s.speech=null;$('toast').style.opacity=0;$('overlay').classList.add('game-over');best=Math.max(best,s.score);try{localStorage.setItem('jelly-dash-best',String(best))}catch{}$('best').textContent=best.toLocaleString();$('pause').disabled=true;document.querySelector('.arena').classList.remove('playing');panel(`<span class="result-label">FINAL SCORE</span><em class="result-score">${s.score.toLocaleString()}</em><span class="result-unit">POINTS</span>`,`${s.meters.toLocaleString()}m · 거리 ${s.meters.toLocaleString()}점 + 젤리 ${s.jellyScore.toLocaleString()}점 · ${formatTime(s.t)}`,'한 번 더 달리기 →','EVERY RUN IS A NEW ADVENTURE');document.querySelector('.live').textContent='● RUN COMPLETE';if(typeof CustomEvent==='function')window.dispatchEvent?.(new CustomEvent('jellyrun:finished',{detail:{score:s.score,distance:s.meters,seconds:s.t,time:formatTime(s.t)}}))}
 function jump(){if(s.mode!=='running')return;const p=s.p;if(p.frozen>0||p.panic>0||p.jumps>=2||p.y< -85)return;if(p.coyote>0)p.jumps=0;p.coyote=0;p.falling=false;p.vy=JUMP;p.jumps++;p.anim=0;p.land=0;playSfx('jump',{channel:'jump',limit:.4});burst(p.x,GROUND-p.y-8,'#e6ffb0',12)}
 function sliding(){return s.p.frozen<=0 && s.p.panic<=0 && slideHeld && s.p.y>=0 && s.p.y<1 && s.p.jumps===0 && s.p.hit<=0}
+function beginSlide(){if(!slideHeld&&s.mode==='running'&&s.p.frozen<=0&&s.p.panic<=0){slideHeld=true;playSfx('slide',{channel:'slide',limit:.8})}}
+function endSlide(){slideHeld=false}
 function box(){const p=s.p,k=p.scale,sl=sliding();return {x:p.x-33*k,y:GROUND-p.y-(sl?48:96)*k,w:66*k,h:(sl?44:90)*k}}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function jellyType(){const r=Math.random()*1.3;return r<1?1:r<1.25?2:3}
@@ -38,7 +42,7 @@ function pickup(type,id,x,y){const size=type==='item'?48:id===3?60:30;s.pickups.
 function travelDistance(from,to){let distance=0;for(let t=from;t<to;){const boostEnd=s.t+s.buff[5],edge=Math.min(to,(Math.floor(t/45)+1)*45,boostEnd>t+1e-7?boostEnd:Infinity);const speed=BASE_SPEED*Math.pow(1.1,Math.floor(t/45))*(t<boostEnd-1e-7?3:1);distance+=(edge-t)*speed;t=edge}return distance}
 function nextPatternType(){
  if(s.t<5)return 'low';
- if(!s.patternBag.length){s.patternBag=['low','row','stack','air','slide2','slide3','combo','gapShort','gapLong','tunnel'];for(let i=s.patternBag.length-1;i>0;i--){const j=Math.floor(rand(0,i+1));[s.patternBag[i],s.patternBag[j]]=[s.patternBag[j],s.patternBag[i]]}}
+ if(!s.patternBag.length){s.patternBag=['low','row','stack','tall','zigzag','air','slide2','slide3','combo','gapShort','gapLong','tunnel'];for(let i=s.patternBag.length-1;i>0;i--){const j=Math.floor(rand(0,i+1));[s.patternBag[i],s.patternBag[j]]=[s.patternBag[j],s.patternBag[i]]}}
  const slides=['air','slide2','slide3','tunnel'];let i=s.patternBag.findIndex(type=>type!==s.lastPattern&&!(slides.includes(type)&&slides.includes(s.lastPattern)));if(i<0)i=0;const selected=s.patternBag.splice(i,1)[0];if(['slide2','slide3','tunnel'].includes(selected)&&Math.random()<.3)return ['low','row','stack'][Math.floor(rand(0,3))];return selected;
 }
 function pattern(forced,origin=W+130){
@@ -57,24 +61,28 @@ function pattern(forced,origin=W+130){
   const spacing=Math.max(340,s.speed*1.35),slideFirst=Math.random()<.5;
   for(let i=0;i<3;i++){const air=(i%2===0)===slideFirst;add(air?'air':'low',x+i*spacing,GROUND-(air?178:76),86,air?110:76,(skin+i)%8);for(let j=0;j<3;j++)pickup('jelly',jellyType(),x+i*spacing+j*42,GROUND-(air?29:155))}width=spacing*2+86;
  }
+ else if(type==='zigzag'){
+  const spacing=Math.max(260,s.speed*1.05);width=spacing*2+82;for(let i=0;i<3;i++){const air=i===1;add(air?'air':'low',x+i*spacing,GROUND-(air?178:76),82,air?110:76,(skin+i*3)%8)}
+ }
  else if(type==='gapShort'||type==='gapLong'){
   // Use ordinary stage speed, excluding boosts: a boost expiring must not leave an impossible gap.
   const arrival=s.t+(x-s.p.x)/s.speed,normalSpeed=BASE_SPEED*Math.pow(1.1,Math.floor(arrival/45)),flight=type==='gapLong'?1.02:.52;
-  width=normalSpeed*flight;s.gaps.push({x,w:width,kind:type==='gapLong'?'double':'single'});
+  width=normalSpeed*flight;s.gaps.push({x,w:width,kind:type==='gapLong'?'double':'single',trapActive:false,trapSoundPlayed:false,avoided:false});
   for(let i=0;i<9;i++)pickup('jelly',jellyType(),x-65+i*(width+130)/8,GROUND-65-Math.sin(i/8*Math.PI)*(type==='gapLong'?230:120));
   toast(type==='gapLong'?'길이 끊겼어요! SPACE 두 번 · 2단 점프':'길이 끊겼어요! SPACE · 점프');
  }
- else {height=type==='air'?110:76;add(type,x,type==='air'?GROUND-178:GROUND-height,width,height,skin)}
+ else {height=type==='air'?110:type==='tall'?132:76;width=type==='tall'?82:86;add(type,x,type==='air'?GROUND-178:GROUND-height,width,height,skin)}
  if(!['tunnel','slide2','slide3','combo','gapShort','gapLong'].includes(type)){const count=type==='row'?10:8;for(let i=0;i<count;i++){const px=x-180+i*(width+330)/(count-1),arc=Math.sin(i/(count-1)*Math.PI);pickup('jelly',jellyType(),px,GROUND-(type==='air'?29:58+arc*Math.min(height+70,JUMP_HEIGHT*2-35)))}}
  const recovery=Math.max(1.35,1.9-(s.stage-1)*.055);s.nextPattern=s.t+(x-(W+130)+width)/s.speed+recovery;
 }
 function gapBelow(){return s.gaps.find(g=>s.p.x>g.x+10&&s.p.x<g.x+g.w-10)}
+function maybeShout(){if(s.mode!=='running'||s.t-s.lastShout<.8||Math.random()>=.5)return false;s.lastShout=s.t;playSfx('shout'+(1+Math.floor(Math.random()*5)),{channel:'shout',limit:2});return true}
 function fallIntoGap(){
  const p=s.p;if(s.revive){s.revive=false;s.p.panic=0;thawPlayer();s.energy=10;s.resurrection=1.6;p.inv=2;p.y=0;p.vy=0;p.jumps=0;p.falling=false;p.coyote=0;blink();s.gaps=s.gaps.filter(g=>g.x>s.p.x+250||g.x+g.w<s.p.x-80);s.obstacles=s.obstacles.filter(o=>o.x>s.p.x+250||o.x+o.w<s.p.x-80);s.nextPattern=Math.max(s.nextPattern,s.t+1.5);toast('부활! 안전한 길로 돌아왔어요');burst(p.x,GROUND-60,'#ffc8ff',45)}
  else{s.energy=0;s.p.frozen=0;s.p.frozenPose=null;s.p.panic=0;s.mode='dying';deathAudio();s.death=.75;s.shake=0;p.blink=0;p.hit=0;p.falling=true;slideHeld=false;$('pause').disabled=true;toast('낭떠러지! 다음에는 끝까지 점프해 보세요')}
 }
 function updateGround(dt){
- for(const gap of s.gaps)gap.x-=s.speed*dt;s.gaps=s.gaps.filter(g=>g.x+g.w>-100);
+ for(const gap of s.gaps){gap.x-=s.speed*dt;const seconds=(gap.x-s.p.x)/Math.max(1,s.speed);if(!gap.trapActive&&seconds<=1&&gap.x+gap.w>s.p.x){gap.trapActive=true;if(!gap.trapSoundPlayed){gap.trapSoundPlayed=true;playSfx(gap.kind==='double'?'trapDouble':'trapSingle',{channel:'trap',limit:1.5})}}if(!gap.avoided&&gap.x+gap.w<s.p.x){gap.avoided=true;maybeShout()}}s.gaps=s.gaps.filter(g=>g.x+g.w>-100);
  const p=s.p;if(p.frozen>0)return;const gap=gapBelow(),bridge=s.buff[5]>0||s.buff[6]>0;
  if(bridge&&p.y<=0&&p.vy<=0){p.y=0;p.vy=0;p.jumps=0;p.falling=false;p.coyote=0;return}
  if(gap&&!bridge&&p.jumps===0){p.jumps=1;p.vy=0;p.coyote=.09;p.falling=true}
@@ -88,7 +96,7 @@ function spawnPirate(){if(!canStartEncounter()){requestEncounter('pirate');retur
  // The encounter owns a clear lane so a jump and a mandatory slide cannot conflict.
  for(const o of s.obstacles)if(o.x<W)burst(o.x+o.w/2,Math.max(150,o.y),'#ffbc77',8);
  s.obstacles=[];s.gaps=[];s.encounterUntil=s.t+4;s.nextPattern=Math.max(s.nextPattern,s.encounterUntil+.8);
- const pirate={x:W-125,y:GROUND-145,w:100,h:145,phase:'attack',hit:false,spawn:s.t,maxShots:Math.random()<.3?4:3,shots:0,nextShot:s.t,lastShot:s.t};s.pirates.push(pirate);playSfx('pirateAttack',{channel:'pirateAttack',limit:.3});fire(pirate);toast(`해적왕 등장! 불꽃 ${pirate.maxShots}연발 · 피해 40%`);
+ const pirate={x:W-125,y:GROUND-145,w:100,h:145,phase:'attack',hit:false,spawn:s.t,maxShots:Math.random()<.3?4:3,shots:0,nextShot:s.t,lastShot:s.t};s.pirates.push(pirate);playSfx('pirateIntro',{channel:'pirateIntro',limit:2.5});playSfx('pirateAttack',{channel:'pirateAttack',limit:.3});fire(pirate);toast(`해적왕 등장! 불꽃 ${pirate.maxShots}연발 · 피해 40%`);
 }
 function updatePirates(dt){let spawn=false;if(s.t>=s.nextPirate){s.nextPirate+=30;spawn=Math.random()<.75}if(s.t>=s.nextPirateGuarantee){s.nextPirateGuarantee+=120;spawn=true}if(spawn)requestEncounter('pirate');
  for(const m of s.pirates){
@@ -97,7 +105,7 @@ function updatePirates(dt){let spawn=false;if(s.t>=s.nextPirate){s.nextPirate+=3
   if(m.phase==='obstacle'){const previous=m.x;m.x-=s.speed*dt;const body={x:m.x-40,y:GROUND-138,w:previous-m.x+80,h:135};if(overlap(box(),body))damage(m,25)}
  }
 
- const pb=box();for(const f of s.projectiles){const previous=f.x;f.x-=s.speed*2*dt;f.age+=dt;const swept={x:f.x-f.w/2,y:f.y-f.h/2,w:previous-f.x+f.w,h:f.h};if(overlap(pb,swept)){damage(f,40);f.destroyed=true;if(s.mode!=='running')break}}
+ const pb=box();for(const f of s.projectiles){const previous=f.x;f.x-=s.speed*2*dt;f.age+=dt;const swept={x:f.x-f.w/2,y:f.y-f.h/2,w:previous-f.x+f.w,h:f.h};if(overlap(pb,swept)){damage(f,40);f.destroyed=true;if(s.mode!=='running')break}else if(!f.avoided&&f.x+f.w/2<pb.x){f.avoided=true;maybeShout()}}
  s.projectiles=s.projectiles.filter(f=>f.x>-100&&!f.destroyed);s.pirates=s.pirates.filter(m=>m.x+130>-100&&!m.destroyed);
 }
 function thawPlayer(){const p=s.p;if(p.frozen>0||p.frozenPose){p.frozen=0;p.frozenPose=null;burst(p.x,GROUND-p.y-55*p.scale,'#a7f5ff',32);toast('얼음이 깨졌어요! 다시 달려요');tone(980,.14)}}
@@ -113,7 +121,7 @@ function spawnIce(){if(!canStartEncounter()){requestEncounter('ice');return fals
  s.obstacles=[];s.gaps=[];s.encounterUntil=s.t+ICE_PREPARE+ICE_LASER;
  s.nextPattern=Math.max(s.nextPattern,s.encounterUntil+1);
  const m={x:W-125,y:GROUND-145,w:100,h:145,spawn:s.t,phase:'prepare',laserStart:s.t+ICE_PREPARE,laserEnd:s.t+ICE_PREPARE+ICE_LASER,freezeApplied:false,hit:false,followup:false};
- s.iceMonsters.push(m);playSfx('iceAim',{channel:'ice',limit:ICE_PREPARE/2});toast('점프로 피한다');
+ s.iceMonsters.push(m);playSfx('iceIntro',{channel:'iceIntro'});playSfx('iceAim',{channel:'ice',limit:ICE_PREPARE/2});toast('점프로 피한다');
 }
 // The visible beam lasts 1.5s; its harmless charge/fade shoulders leave a jumpable 1.23s core.
 function iceBeamActive(m){const age=s.t-m.laserStart;return m.phase==='laser'&&age>=.12-1e-8&&age<ICE_LASER-.15-1e-8}
@@ -122,7 +130,7 @@ function updateIce(dt){
  for(const m of s.iceMonsters){
   if(!m.chargeSound&&s.t>=m.spawn+ICE_PREPARE/2&&s.t<m.laserStart){m.chargeSound=true;playSfx('iceCharge',{channel:'ice',limit:ICE_PREPARE/2})}
   if(s.t>=m.laserStart&&s.t<m.laserEnd){if(m.phase!=='laser')playSfx('iceFire',{channel:'ice',limit:ICE_LASER});m.phase='laser'}
-  if(s.t>=m.laserEnd&&s.t<m.laserEnd+ICE_RECOVER)m.phase='recover';
+  if(s.t>=m.laserEnd&&s.t<m.laserEnd+ICE_RECOVER){if(!m.avoidChecked){m.avoidChecked=true;if(!m.freezeApplied)maybeShout()}m.phase='recover'}
   const count=iceCountdown(m);if(count&&count!==m.lastCount){m.lastCount=count;tone(count==='Bang!!'?1100:500,.1)}
   if(iceBeamActive(m)&&overlap(box(),{x:0,y:GROUND-88,w:m.x-65,h:36}))freezePlayer(m);
   if(s.t>=m.laserEnd+ICE_RECOVER){
@@ -131,7 +139,7 @@ function updateIce(dt){
    const previous=m.x;m.x-=s.speed*dt;if(overlap(box(),{x:m.x-38,y:GROUND-137,w:previous-m.x+76,h:134}))damage(m,25);
   }
  }
- s.iceMonsters=s.iceMonsters.filter(m=>m.x+140> -100&&!m.destroyed);
+ s.iceMonsters=s.iceMonsters.filter(m=>m.x+140> -100&&!m.destroyed);if(!s.iceMonsters.length)soundPlayer?.stopChannel('iceIntro');
 }
 function hasSpecialMonster(){return s.pirates.length>0||s.iceMonsters.length>0||s.batters.length>0||s.projectiles.length>0||s.baseballs.length>0}
 function canStartEncounter(){return !hasSpecialMonster()&&s.bombs.length===0}
@@ -141,14 +149,14 @@ function iceCountdown(m){if(m.phase==='prepare')return String(clamp(Math.ceil((m
 function spawnBaseball(){
  if(!canStartEncounter()){requestEncounter('baseball');return false}
  s.obstacles=[];s.gaps=[];s.encounterUntil=s.t+2;s.nextPattern=Math.max(s.nextPattern,s.encounterUntil+1);
- s.batters.push({x:W-125,y:GROUND-155,w:90,h:155,spawn:s.t,phase:'prepare',fired:false,shots:0,maxShots:Math.random()<.3?2:1,nextShot:s.t+.65,hit:false});toast('야구선수 등장! 공을 피하세요 · 피해 40% / 패닉 2초');tone(620,.16);
+ s.batters.push({x:W-125,y:GROUND-155,w:90,h:155,spawn:s.t,phase:'prepare',fired:false,shots:0,maxShots:Math.random()<.3?2:1,nextShot:s.t+.65,hit:false});playSfx('baseballIntro',{channel:'baseballIntro',limit:2.5});toast('야구선수 등장! 공을 피하세요 · 피해 40% / 패닉 2초');tone(620,.16);
 }
 function fireBaseball(m){const pb=box(),x=m.x-100,y=GROUND-83,dx=s.p.x-x,dy=pb.y+pb.h/2-y,d=Math.hypot(dx,dy);m.fired=true;m.shots++;m.nextShot=s.t+.38;m.phase='swing';m.swingStart=s.t;s.baseballs.push({x,y,w:64,h:64,dx:dx/d,dy:dy/d,age:0,hit:false});burst(x,y,'#ffe5a0',26);soundPlayer?.sequence(['baseballHit','baseballFlight'],{channel:'baseball-'+m.shots,limits:[.16,.65]})}
 function hitBaseball(ball){const p=s.p,unprotected=p.inv<=0&&s.buff[1]<=0&&s.buff[5]<=0&&s.buff[6]<=0,hadRevive=s.revive;damage(ball,40);ball.destroyed=true;if(unprotected&&s.mode==='running'&&!(hadRevive&&!s.revive)){p.panic=2;slideHeld=false;burst(p.x,GROUND-p.y-65,'#ffc1e3',22);toast('패닉! 2초간 조작할 수 없어요')}}
 function updateBaseball(dt){
  let spawn=false;if(s.t>=s.nextBaseball){s.nextBaseball+=20;spawn=Math.random()<.5}if(s.t>=s.nextBaseballGuarantee){s.nextBaseballGuarantee+=150;spawn=true}if(spawn)requestEncounter('baseball');
  for(const m of s.batters){if(m.shots<m.maxShots&&s.t>=m.nextShot)fireBaseball(m);if(m.shots===m.maxShots&&s.t-m.swingStart>=.55){m.phase='obstacle';const prev=m.x;m.x-=s.speed*dt;if(overlap(box(),{x:m.x-35,y:GROUND-145,w:prev-m.x+70,h:140}))damage(m,25)}}
- for(const ball of s.baseballs){const px=ball.x,py=ball.y;ball.x+=ball.dx*s.speed*3*dt;ball.y+=ball.dy*s.speed*3*dt;ball.age+=dt;const swept={x:Math.min(px,ball.x)-26,y:Math.min(py,ball.y)-26,w:Math.abs(px-ball.x)+52,h:Math.abs(py-ball.y)+52};if(overlap(box(),swept))hitBaseball(ball);if(s.mode!=='running')break}
+ for(const ball of s.baseballs){const px=ball.x,py=ball.y;ball.x+=ball.dx*s.speed*3*dt;ball.y+=ball.dy*s.speed*3*dt;ball.age+=dt;const swept={x:Math.min(px,ball.x)-26,y:Math.min(py,ball.y)-26,w:Math.abs(px-ball.x)+52,h:Math.abs(py-ball.y)+52};if(overlap(box(),swept))hitBaseball(ball);else if(!ball.avoided&&ball.x+26<s.p.x){ball.avoided=true;maybeShout()}if(s.mode!=='running')break}
  s.baseballs=s.baseballs.filter(b=>!b.destroyed&&b.x> -100&&b.y> -150&&b.y<H+150);s.batters=s.batters.filter(m=>!m.destroyed&&m.x+130> -100);
 }
 function spawnBomb(){
@@ -163,7 +171,7 @@ function updateBombs(dt){
  for(const b of s.bombs){b.x-=s.speed*dt;b.flash+=dt*bombFlashRate(b);b.age+=dt;
   if(b.phase==='armed'&&b.x-s.p.x<=Math.max(190,s.speed*BOMB_TRIGGER_TIME)){b.phase='igniting';b.age=0;tone(180,.12)}
   else if(b.phase==='igniting'&&b.age>=.16){b.phase='exploding';b.age=0;burst(b.x,GROUND-75,'#ff9c53',32);tone(95,.25)}
-  else if(b.phase==='exploding'&&b.age>=.95){b.phase='spent';b.age=0}
+  else if(b.phase==='exploding'&&b.age>=.95){b.phase='spent';b.age=0;if(!b.hit&&!b.avoidChecked){b.avoidChecked=true;maybeShout()}}
   if(b.phase==='exploding'&&overlap(box(),bombBounds(b)))damage(b,25);
  }
  s.bombs=s.bombs.filter(b=>!b.destroyed&&b.x+BOMB_BASE*BOMB_SCALE> -100&&!(b.phase==='spent'&&b.age>.3));
@@ -175,9 +183,8 @@ function spawnAmbientJellies(){
  }
 }
 function drawTrap(g,left,right){
- const y=GROUND+TRAP_HEIGHT*TRAP_DROP;ctx.save();ctx.beginPath();ctx.rect(left,GROUND,right-left,H-GROUND);ctx.clip();ctx.imageSmoothingEnabled=false;
- if(g.kind==='single'){for(let x=g.x+Math.max(0,Math.floor(-g.x/TRAP_HEIGHT))*TRAP_HEIGHT;x<Math.min(W,g.x+g.w);x+=TRAP_HEIGHT)sprite(assets.trap,55,100,495,505,x,y,TRAP_HEIGHT,TRAP_HEIGHT)}
- else sprite(assets.trap,610,105,1495,515,g.x,y,g.w,TRAP_HEIGHT);ctx.restore();
+ const y=GROUND+TRAP_HEIGHT*TRAP_DROP,im=g.kind==='double'?assets.trapDouble:assets.trapSingle,frame=g.trapActive?1:0,sx=frame*887;ctx.save();ctx.beginPath();ctx.rect(left,GROUND,right-left,H-GROUND);ctx.clip();ctx.imageSmoothingEnabled=false;
+ if(g.kind==='single'){for(let x=g.x+Math.max(0,Math.floor(-g.x/TRAP_HEIGHT))*TRAP_HEIGHT;x<Math.min(W,g.x+g.w);x+=TRAP_HEIGHT)sprite(im,sx,0,887,887,x,y,TRAP_HEIGHT,TRAP_HEIGHT)}else sprite(im,sx,0,887,887,g.x,y,g.w,TRAP_HEIGHT);ctx.restore();
 }
 function acquire(id){const p=s.p;burst(p.x,GROUND-p.y-65,colors[id],30);playSfx(['','shield','heart','heart','magnet','speed','giant'][id],{channel:'item',limit:2});if(id===1)s.buff[1]=15;if(id===2){s.energy=Math.min(100,s.energy+30);s.heal=1;blink()}if(id===3)s.revive=true;if(id===4)s.buff[4]=10;if(id===5)s.buff[5]=8;if(id===6)s.buff[6]=10;if(id===5||id===6){thawPlayer();p.panic=0}s.itemNotice={id,text:effectDescriptions[id],until:s.t+3};toast(names[id]+' · '+effectDescriptions[id])}
 function damage(o,amount=25){const p=s.p;if(s.mode!=='running'||o.hit)return;o.hit=true;if(s.buff[5]>0||s.buff[6]>0){if(o.type==='tunnel'){if(!o.nextCrush||s.t>=o.nextCrush){burst(p.x,GROUND-p.y-70,'#fff2a1',12);o.nextCrush=s.t+.15}}else{burst(o.x+o.w/2,o.y+o.h/2,'#fff2a1',22);o.destroyed=true}return}if(p.inv>0)return;if(s.buff[1]>0){s.buff[1]=0;blink();p.inv=.95;burst(p.x,GROUND-p.y-60,colors[1],35);toast('보호막이 피해를 막았어요!');return}s.energy=Math.max(0,s.energy-amount);p.hit=.48;p.inv=1.2;blink();s.shake=.28;playSfx('shock'+(1+Math.floor(Math.random()*3)),{channel:'shock',limit:.6});floating('−'+amount+'%',p.x,GROUND-p.y-115,'#ff9f9f');if(s.energy===0){if(s.revive){playSfx('death',{channel:'reviveDeath',limit:.5});s.revive=false;s.p.panic=0;thawPlayer();s.energy=10;s.resurrection=1.6;p.inv=2;p.hit=0;blink();burst(p.x,GROUND-p.y-50,'#ffc8ff',65);toast('부활! 에너지 10%로 다시 달려요');tone(1200,.4)}else{s.p.frozen=0;s.p.frozenPose=null;s.p.panic=0;s.mode='dying';deathAudio();s.shake=0;s.death=1.4;p.hit=0;p.blink=0;slideHeld=false;$('pause').disabled=true}}}
@@ -223,7 +230,7 @@ function drawRoad(){
  }road(edge,W-edge)
 }
 
-function monster(o){if(o.type==='tunnel'){ctx.save();ctx.beginPath();ctx.rect(o.x,0,o.w,GROUND);ctx.clip();for(let x=o.x+Math.max(0,Math.floor(-o.x/70))*70;x<Math.min(W+70,o.x+o.w);x+=70){sprite(assets.barrier,(o.skin%4)*280.5,Math.floor(o.skin/4)*278,280.5,278,x,o.h-90,76,90)}ctx.restore();if(o.cleared)return;ctx.save();ctx.fillStyle='#d6ff63';ctx.font='bold 20px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText('↓ 계속 누르세요 · '+(o.until===null?o.duration.toFixed(1):Math.max(0,o.until-s.t).toFixed(1))+'s',clamp(o.x+160,400,W-180),o.h-112);ctx.restore();return}let sx,sy,sw,sh;if(o.type==='tall'){sx=o.skin*280.5;sy=554;sw=280.5;sh=486}else{sx=(o.skin%4)*280.5;sy=Math.floor(o.skin/4)*278;sw=280.5;sh=278}ctx.save();if(o.hit)ctx.globalAlpha=.6;const bob=o.type==='air'?Math.sin(s.t*4+o.skin)*3:0;sprite(assets.barrier,sx,sy,sw,sh,o.x,o.y+bob,o.w,o.h);if(o.type==='air'){ctx.fillStyle='#d6ff63';ctx.font='bold 12px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText('↓ SLIDE',o.x+o.w/2,o.y-12)}ctx.restore()}
+function monster(o){if(o.type==='tunnel'){ctx.save();ctx.beginPath();ctx.rect(o.x,0,o.w,GROUND);ctx.clip();for(let x=o.x+Math.max(0,Math.floor(-o.x/70))*70;x<Math.min(W+70,o.x+o.w);x+=70){sprite(assets.barrier,(o.skin%4)*280.5,Math.floor(o.skin/4)*278,280.5,278,x,o.h-90,76,90)}ctx.restore();if(o.cleared)return;ctx.save();ctx.fillStyle='#d6ff63';ctx.font='bold 20px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText('↓ 계속 누르세요 · '+(o.until===null?o.duration.toFixed(1):Math.max(0,o.until-s.t).toFixed(1))+'s',clamp(o.x+160,400,W-180),o.h-112);ctx.restore();return}let sx,sy,sw,sh;if(o.type==='tall'){sx=(o.skin%4)*280.5;sy=554;sw=280.5;sh=486}else{sx=(o.skin%4)*280.5;sy=Math.floor(o.skin/4)*278;sw=280.5;sh=278}ctx.save();if(o.hit)ctx.globalAlpha=.6;const bob=o.type==='air'?Math.sin(s.t*4+o.skin)*3:0;sprite(assets.barrier,sx,sy,sw,sh,o.x,o.y+bob,o.w,o.h);if(o.type==='air'){ctx.fillStyle='#d6ff63';ctx.font='bold 12px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText('↓ SLIDE',o.x+o.w/2,o.y-12)}ctx.restore()}
 function ring(x,y,r,color,width=3){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke()}
 function character(){const p=s.p,k=p.scale,sl=sliding(),dead=s.mode==='dying'||s.mode==='over';let row=0,col=Math.floor(p.anim*11)%4;if(dead){row=4;col=0}else if(p.panic>0){row=3;col=0}else if(p.hit>0){row=3;col=0}else if(p.jumps){row=1;col=p.vy>180?0:p.vy>-260?1:2}else if(sl){row=2;col=0}if(!dead&&p.frozen>0&&p.frozenPose){row=p.frozenPose.row;col=p.frozenPose.col}
  const run=row===0,im=run?assets.run:assets.player,sw=run?assets.run.width/4:280,sh=run?assets.run.height:280.8;
@@ -284,12 +291,12 @@ function draw(){ctx.clearRect(0,0,W,H);if(!ready)return;ctx.save();if(s.mode==='
 function frame(now){const dt=Math.min((now-last)/1000||0,.1);last=now;if(s.mode==='ready')decor+=dt*30;if(s.mode==='running'||s.mode==='dying'){accumulator+=dt;while(accumulator>=1/120){update(1/120);accumulator-=1/120}}else accumulator=0;draw();hud();requestAnimationFrame(frame)}
 $('start').onclick=()=>s.mode==='paused'?pause():start();$('pause').onclick=pause;$('sound').onclick=()=>{sound=!sound;soundPlayer?.setEnabled(sound);$('sound').textContent='소리 '+(sound?'ON':'OFF');$('sound').setAttribute?.('aria-pressed',String(sound));if(!sound)audio?.suspend?.()};
 $('volume').addEventListener('input',event=>soundPlayer?.setVolume(Number(event.target.value)/100));
-window.addEventListener('keydown',e=>{if(['Space','ArrowDown','ArrowUp'].includes(e.code))e.preventDefault();if(e.code==='ArrowDown')slideHeld=true;if(e.repeat)return;if(e.code==='Space'||e.code==='ArrowUp'){if(s.mode==='ready'||s.mode==='over')start();else jump()}if(e.code==='Escape'||e.code==='KeyP')pause()});window.addEventListener('keyup',e=>{if(e.code==='ArrowDown')slideHeld=false});
-$('jump').addEventListener('pointerdown',e=>{e.preventDefault();jump()});$('slide').addEventListener('pointerdown',e=>{e.preventDefault();slideHeld=true;e.currentTarget.setPointerCapture(e.pointerId)});for(const event of ['pointerup','pointercancel','lostpointercapture'])$('slide').addEventListener(event,()=>slideHeld=false);
-window.addEventListener('blur',()=>{slideHeld=false;if(s.mode==='running')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&s.mode==='running')pause()});
-Promise.all([load('player','main character.png'),load('run','main character_1.png?v=3'),load('pirate','monster01.png'),load('ice','monster02.png?v=7'),load('bg3alt','bg_image/bg03-1.png?v=6'),load('barrier','barrier1.png'),load('bomb','barrier2.png?v=8'),load('trap','barrier3.png?v=8'),load('batter','monster03.png?v=8'),...[1,2,3,4,5,6,7].map(i=>load('bg'+i,'bg_image/bg0'+i+'.png?v=6')),...[1,2,3].map(i=>load('jelly'+i,'jelly/jelly'+i+'.png')),...[1,2,3,4,5,6].map(i=>load('item'+i,'item/item'+i+'.png'))]).then(()=>{ready=true;$('start').disabled=false;$('start').textContent='지금 달리기 →';requestAnimationFrame(frame)}).catch(e=>{$('start').textContent='에셋 로딩 실패';$('description').textContent='파일을 확인하고 새로고침해 주세요: '+e.message});
+window.addEventListener('keydown',e=>{if(['Space','ArrowDown','ArrowUp'].includes(e.code))e.preventDefault();if(e.code==='ArrowDown')beginSlide();if(e.repeat)return;if(e.code==='Space'||e.code==='ArrowUp'){if(s.mode==='ready')start();else jump()}if(e.code==='Escape'||e.code==='KeyP')pause()});window.addEventListener('keyup',e=>{if(e.code==='ArrowDown')endSlide()});
+$('jump').addEventListener('pointerdown',e=>{e.preventDefault();jump()});$('slide').addEventListener('pointerdown',e=>{e.preventDefault();beginSlide();e.currentTarget.setPointerCapture(e.pointerId)});for(const event of ['pointerup','pointercancel','lostpointercapture'])$('slide').addEventListener(event,endSlide);
+window.addEventListener('jellyrun:restart',start);window.addEventListener('blur',()=>{endSlide();if(s.mode==='running')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&s.mode==='running')pause()});
+Promise.all([load('player','main character.png'),load('run','main character_1.png?v=3'),load('pirate','monster01.png'),load('ice','monster02.png?v=7'),load('bg3alt','bg_image/bg03-1.png?v=6'),load('barrier','barrier1.png'),load('bomb','barrier2.png?v=8'),load('trapSingle','barrier4.png?v=10'),load('trapDouble','barrier5.png?v=10'),load('batter','monster03.png?v=8'),...[1,2,3,4,5,6,7].map(i=>load('bg'+i,'bg_image/bg0'+i+'.png?v=6')),...[1,2,3].map(i=>load('jelly'+i,'jelly/jelly'+i+'.png')),...[1,2,3,4,5,6].map(i=>load('item'+i,'item/item'+i+'.png'))]).then(()=>{ready=true;$('start').disabled=false;$('start').textContent='지금 달리기 →';requestAnimationFrame(frame)}).catch(e=>{$('start').textContent='에셋 로딩 실패';$('description').textContent='파일을 확인하고 새로고침해 주세요: '+e.message});
 // Explicit opt-in hook for deterministic local gameplay verification.
-if(new URLSearchParams(location.search).has('test'))window.__game={get state(){return s},start,update,jump,acquire,damage,box,draw,jellyType,schedule,setSlide:v=>slideHeld=v,constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
+if(new URLSearchParams(location.search).has('test'))window.__game={get state(){return s},start,update,jump,acquire,damage,box,draw,jellyType,schedule,setSlide:v=>v?beginSlide():endSlide(),constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
 })();
 
 
