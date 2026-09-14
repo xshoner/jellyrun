@@ -224,7 +224,6 @@ function drawRoad(){
  function road(x,w){if(w<=0)return;ctx.save();ctx.beginPath();ctx.rect(x,GROUND,w,H-GROUND);ctx.clip();ctx.fillStyle='#102c31';ctx.fillRect(x,GROUND,w,H-GROUND);ctx.fillStyle='#bad888';ctx.fillRect(x,GROUND,w,5);ctx.fillStyle='#48715a';ctx.fillRect(x,GROUND+5,w,12);ctx.fillStyle='#ffffff08';for(let t=-(s.distance%100);t<W;t+=100){ctx.fillRect(t,GROUND+35,48,3);ctx.fillRect(t+25,GROUND+75,24,3)}ctx.restore()}
  let edge=0;for(const g of [...s.gaps].sort((a,b)=>a.x-b.x)){if(g.x>=W||g.x+g.w<=0)continue;const left=Math.max(0,g.x),right=Math.min(W,g.x+g.w);road(edge,left-edge);edge=right;
   const abyss=ctx.createLinearGradient(0,GROUND,0,H);abyss.addColorStop(0,'#050c18');abyss.addColorStop(1,'#211335');ctx.fillStyle=abyss;ctx.fillRect(left,GROUND,right-left,H-GROUND);drawTrap(g,left,right);ctx.fillStyle='#ffbf70';ctx.fillRect(g.x-5,GROUND,5,24);ctx.fillRect(g.x+g.w,GROUND,5,24);
-  ctx.save();ctx.setLineDash([8,9]);ctx.strokeStyle='#ffc17a90';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(g.x,GROUND-15);ctx.quadraticCurveTo(g.x+g.w/2,GROUND-(g.kind==='double'?200:125),g.x+g.w,GROUND-15);ctx.stroke();ctx.restore();
   if(s.buff[5]>0||s.buff[6]>0){ctx.fillStyle='#ffefaab0';ctx.fillRect(left,GROUND,right-left,7)}
  }road(edge,W-edge)
 }
@@ -297,7 +296,6 @@ Promise.all([load('player','main character.png'),load('run','main character_1.pn
 // Explicit opt-in hook for deterministic local gameplay verification.
 if(new URLSearchParams(location.search).has('test'))window.__game={get state(){return s},start,update,jump,acquire,damage,box,draw,jellyType,schedule,setSlide:v=>v?beginSlide():endSlide(),constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
 })();
-
 
 
 
