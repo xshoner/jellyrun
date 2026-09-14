@@ -12,7 +12,7 @@
     shout1:'shout01.mp3', shout2:'shout02.mp3', shout3:'shout03.mp3', shout4:'shout04.mp3', shout5:'shout05.mp3',
     shock1:'shock01.mp3', shock2:'shock02.mp3', shock3:'shock03.mp3'
   };
-  const MUSIC = ['bgm001.mp3','bgm002.mp3','bmg003.mp3','bmg004.mp3'];
+  const MUSIC = ['bgm001.mp3','bgm002.mp3','bmg003.mp3','bmg004.mp3','bgm005.mp3'];
   class GameAudio {
     constructor({AudioClass=globalThis.Audio}={}) {
       this.AudioClass=AudioClass;this.enabled=true;this.master=1;this.running=false;this.paused=false;

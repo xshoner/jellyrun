@@ -17,7 +17,7 @@ function deathAudio(){soundPlayer?.endRun('death')}
 let best=0;try{best=Number(localStorage.getItem('jelly-dash-best'))||0}catch{} $('best').textContent=best.toLocaleString();
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function load(key,path){return new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[key]=im;resolve()};im.onerror=()=>reject(new Error(path));im.src=path})}
-function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0,lastShout:-10,goblins:[],nextGoblin:17,pendingGoblin:false,nextPortal:120,portal:null,pendingPortal:false,nextBonusJelly:30,bonus:null,bonusSeconds:0,destroyScore:0,giantEffectPending:false}}
+function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0,lastShout:-10,goblins:[],nextGoblin:17,pendingGoblin:false,nextPortal:90,portal:null,pendingPortal:false,nextBonusJelly:30,bonus:null,bonusSeconds:0,destroyScore:0,giantEffectPending:false}}
 s=fresh();
 function tone(freq=600,duration=.08){if(!sound||soundPlayer?.master===0)return;try{audio ||=new(window.AudioContext||window.webkitAudioContext)();audio.resume();const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(freq*.65,audio.currentTime+duration);gain.gain.setValueAtTime(.055*(soundPlayer?.master??1),audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration)}catch{}}
 function toast(text){$('toast').textContent=text;s.toast=2.5;$('toast').style.opacity=1}
@@ -26,12 +26,15 @@ function floating(text,x,y,color){s.fx.push({text,x,y,vx:0,vy:-65,life:1,max:1,c
 function blink(){s.p.blink=.9}
 let fullscreenSession=false,fullscreenNative=false;
 async function lockLandscape(){
+ if(globalThis.matchMedia?.('(hover: hover) and (pointer: fine)').matches){
+  fullscreenSession=false;document.body?.classList?.add('game-active');document.body?.classList?.add('desktop-game');return;
+ }
  fullscreenSession=true;document.body?.classList?.add('game-active');
  try{if(globalThis.history&&!history.state?.jellyrunFullscreen)history.pushState({...history.state,jellyrunFullscreen:true},'')}catch{}
  try{if(!document.fullscreenElement)await document.documentElement?.requestFullscreen?.({navigationUI:'hide'});if(fullscreenSession&&globalThis.matchMedia?.('(max-width: 1000px)').matches)await globalThis.screen?.orientation?.lock?.('landscape')}catch{}
 }
 function unlockLandscape(fromPop=false){
- fullscreenSession=false;fullscreenNative=false;document.body?.classList?.remove('game-active');
+ fullscreenSession=false;fullscreenNative=false;document.body?.classList?.remove('game-active');document.body?.classList?.remove('desktop-game');
  try{globalThis.screen?.orientation?.unlock?.()}catch{}
  if(document.fullscreenElement)document.exitFullscreen?.().catch?.(()=>{});
  try{if(!fromPop&&globalThis.history?.state?.jellyrunFullscreen)history.back()}catch{}
@@ -296,7 +299,7 @@ function spawnPortal(){
  playSfx('portal',{channel:'portal'});return true;
 }
 function updatePortal(dt){
- if(s.t>=s.nextPortal){s.nextPortal+=120;if(Math.random()<.1)s.pendingPortal=true}
+ if(s.t>=s.nextPortal){s.nextPortal+=90;s.pendingPortal=true}
  if(s.pendingPortal&&!s.portal)spawnPortal();
  const portal=s.portal;if(!portal)return;
  const previous=portal.x;portal.x-=s.speed*dt;portal.age+=dt;
@@ -443,4 +446,3 @@ Promise.all([load('player','main character.png'),load('run','main character_1.pn
 // Explicit opt-in hook for deterministic local gameplay verification.
 if(new URLSearchParams(location.search).has('test'))window.__game={get state(){return s},start,update,jump,acquire,spawnGoblin,updateGoblins,spawnPortal,updatePortal,enterBonus,updateBonus,updatePickups,spawnRareJelly,tunnelTiles,returnToApp,finish,damage,box,draw,jellyType,schedule,setSlide:v=>v?beginSlide():endSlide(),constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
 })();
-

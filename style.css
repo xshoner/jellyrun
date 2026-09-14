@@ -19,6 +19,8 @@ body.game-active{overscroll-behavior:none}body.game-active{overflow:hidden;backg
 .volume-control{display:inline-flex;align-items:center;gap:5px;margin:0 10px;font-size:10px;color:#b9c6b0}.volume-control input{width:66px;accent-color:#d6ff63;vertical-align:middle}.korean-title{font-size:clamp(40px,5.4vw,86px);line-height:1.14;letter-spacing:-4px}.game-over .korean-title{font-size:inherit}@media(max-width:850px){.volume-control{margin:0 4px;font-size:0}.volume-control input{width:46px}.brand{font-size:18px}.live{display:none}}@media(max-width:600px){.intro .korean-title{font-size:36px;letter-spacing:-2px}.intro .korean-title br{display:block}.volume-control input{width:40px}.brand{font-size:15px}header button{padding:7px 5px}}
 
 /* Controls stay inside the game surface in fullscreen and embedded play. */
+body.game-active.desktop-game{background:#000}
+body.game-active.desktop-game .arena{inset:50% auto auto 50%;margin:0;width:min(70vw,124.444444dvh);height:auto;max-height:70dvh;aspect-ratio:16/9;transform:translate(-50%,-50%);transform-origin:center}
 .game-actions{position:absolute;right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:6;display:flex;gap:8px}
 .game-actions button{background:#071d26e8;border-color:#d6ff6370;font-size:14px;font-weight:700;min-height:40px;touch-action:manipulation}
 .game-actions button[hidden],.bonus-timer[hidden]{display:none}
