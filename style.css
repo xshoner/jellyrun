@@ -17,3 +17,11 @@ body.game-active{overscroll-behavior:none}body.game-active{overflow:hidden;backg
 .distance-readout{display:block!important;margin-top:5px!important;color:#d6ff63!important;font-size:14px!important;font-weight:700;letter-spacing:1px!important}.distance-readout small{display:inline!important;letter-spacing:1px!important;font-size:8px!important;margin-right:7px}@media(max-width:600px){.distance-readout{font-size:11px!important}.distance-readout small{font-size:7px!important}}
 
 .volume-control{display:inline-flex;align-items:center;gap:5px;margin:0 10px;font-size:10px;color:#b9c6b0}.volume-control input{width:66px;accent-color:#d6ff63;vertical-align:middle}.korean-title{font-size:clamp(40px,5.4vw,86px);line-height:1.14;letter-spacing:-4px}.game-over .korean-title{font-size:inherit}@media(max-width:850px){.volume-control{margin:0 4px;font-size:0}.volume-control input{width:46px}.brand{font-size:18px}.live{display:none}}@media(max-width:600px){.intro .korean-title{font-size:36px;letter-spacing:-2px}.intro .korean-title br{display:block}.volume-control input{width:40px}.brand{font-size:15px}header button{padding:7px 5px}}
+
+/* Controls stay inside the game surface in fullscreen and embedded play. */
+.game-actions{position:absolute;right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:6;display:flex;gap:8px}
+.game-actions button{background:#071d26e8;border-color:#d6ff6370;font-size:14px;font-weight:700;min-height:40px;touch-action:manipulation}
+.game-actions button[hidden],.bonus-timer[hidden]{display:none}
+.arena.playing .stage{margin-top:46px}
+.bonus-timer{position:absolute;top:24%;left:50%;transform:translateX(-50%);padding:8px 20px;border:1px solid #f3c9ff;background:#311453dd;border-radius:24px;font-size:20px;font-weight:900;color:#ffeaff;pointer-events:none}
+@media(max-width:600px){.game-actions{right:8px;top:8px;gap:4px}.game-actions button{font-size:12px;min-height:34px;padding:6px 8px}.arena.playing .stage{margin-top:40px}.bonus-timer{font-size:16px}}

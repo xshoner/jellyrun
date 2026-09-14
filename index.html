@@ -7,7 +7,7 @@
   <meta name="description" content="젤리를 모으고 장애물을 피하며 최고 기록에 도전하는 러닝 게임">
   <title>지각만큼은 안돼!</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
   <main class="shell">
@@ -30,6 +30,8 @@
         <div class="stage"><b id="stage">STAGE 01</b><span id="time">00:00</span><div class="stage-track"><i id="stageProgress"></i></div><small id="speed">SPEED ×1.00</small></div>
       </div>
       <div id="toast" role="status"></div>
+      <div class="game-actions"><button id="exitGameFullscreen" hidden aria-label="전체화면 나가기">↙ 화면 줄이기</button><button id="gamePause" hidden aria-pressed="false">Ⅱ 일시정지</button></div>
+      <div id="bonusTimer" class="bonus-timer" hidden></div>
       <div class="overlay" id="overlay">
         <div class="intro"><span class="eyebrow" id="eyebrow">A LITTLE SWEET. A LITTLE WILD.</span><h1 id="title" class="korean-title">지각만큼은<br><em>안돼!</em></h1><p id="description">젤리를 모으고, 몬스터를 피하고.<br>당신의 최고 기록을 향해 달려보세요.</p><button class="primary" id="start" disabled>에셋 불러오는 중…</button><div class="intro-controls"><span><kbd>SPACE</kbd> 점프 / 2단 점프</span><span><kbd>↓</kbd> 길게 눌러 슬라이딩</span></div></div>
         <div class="hero"><div class="hero-ring"></div><div class="hero-sprite"></div><span class="hero-tag">오늘의 주인공은 당신 ✦</span></div>
@@ -64,9 +66,9 @@
   </section>
 
   <div id="rotateHint" class="rotate-hint" hidden>가로 화면으로 전환하고 있어요…</div>
-  <script src="audio.js?v=11"></script>
-  <script src="game.js?v=12"></script>
-  <script type="module" src="leaderboard.js?v=11"></script>
-  <script src="pwa.js?v=11"></script>
+  <script src="audio.js?v=13"></script>
+  <script src="game.js?v=13"></script>
+  <script type="module" src="leaderboard.js?v=13"></script>
+  <script src="pwa.js?v=13"></script>
 </body>
 </html>

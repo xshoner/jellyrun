@@ -1,11 +1,14 @@
-const CACHE = 'jellyrun-v12';
-const CORE = ['./', './index.html', './style.css?v=11', './game.js?v=12', './audio.js?v=11', './leaderboard.js?v=11', './pwa.js?v=11', './manifest.webmanifest'];
+const CACHE = 'jellyrun-v13';
+const CORE = ['./', './index.html', './style.css?v=13', './game.js?v=13', './audio.js?v=13', './leaderboard.js?v=13', './pwa.js?v=13', './manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== location.origin) return;
   event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-    if (response.ok) caches.open(CACHE).then(cache => cache.put(event.request, response.clone()));
+    if (response.ok) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, copy)).catch(() => {}));
+    }
     return response;
   })));
 });
