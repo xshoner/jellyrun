@@ -25,7 +25,15 @@ function burst(x,y,color,n=20){for(let i=0;i<n;i++)s.fx.push({x,y,vx:rand(-160,1
 function floating(text,x,y,color){s.fx.push({text,x,y,vx:0,vy:-65,life:1,max:1,color})}
 function blink(){s.p.blink=.9}
 let fullscreenSession=false,fullscreenNative=false;
+const embeddedGame=!!window.parent&&window.parent!==window;
+function notifyEmbeddedDisplay(mode){
+ if(embeddedGame)window.parent.postMessage({type:'jellyrun:display',mode},'*');
+}
 async function lockLandscape(){
+ if(embeddedGame){
+  fullscreenSession=false;document.body.classList.add('embedded-game');document.body.classList.add('game-active');
+  notifyEmbeddedDisplay('playing');return;
+ }
  if(globalThis.matchMedia?.('(hover: hover) and (pointer: fine)').matches){
   fullscreenSession=false;document.body?.classList?.add('game-active');document.body?.classList?.add('desktop-game');return;
  }
@@ -35,6 +43,7 @@ async function lockLandscape(){
 }
 function unlockLandscape(fromPop=false){
  fullscreenSession=false;fullscreenNative=false;document.body?.classList?.remove('game-active');document.body?.classList?.remove('desktop-game');
+ if(embeddedGame){notifyEmbeddedDisplay('lobby');return;}
  try{globalThis.screen?.orientation?.unlock?.()}catch{}
  if(document.fullscreenElement)document.exitFullscreen?.().catch?.(()=>{});
  try{if(!fromPop&&globalThis.history?.state?.jellyrunFullscreen)history.back()}catch{}

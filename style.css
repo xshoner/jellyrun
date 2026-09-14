@@ -21,6 +21,9 @@ body.game-active{overscroll-behavior:none}body.game-active{overflow:hidden;backg
 /* Controls stay inside the game surface in fullscreen and embedded play. */
 body.game-active.desktop-game{background:#000}
 body.game-active.desktop-game .arena{inset:50% auto auto 50%;margin:0;width:min(70vw,124.444444dvh);height:auto;max-height:70dvh;aspect-ratio:16/9;transform:translate(-50%,-50%);transform-origin:center}
+/* The LMS provides the 16:9 viewport. Embedded play fills it edge to edge. */
+body.game-active.embedded-game{background:#153246}
+body.game-active.embedded-game .arena{inset:0;margin:0;width:100vw;height:100dvh;max-height:none;aspect-ratio:auto;transform:none;border:0;border-radius:0}
 .game-actions{position:absolute;right:max(16px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));z-index:6;display:flex;gap:8px}
 .game-actions button{background:#071d26e8;border-color:#d6ff6370;font-size:14px;font-weight:700;min-height:40px;touch-action:manipulation}
 .game-actions button[hidden],.bonus-timer[hidden]{display:none}
