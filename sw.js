@@ -1,5 +1,5 @@
-const CACHE = 'jellyrun-v18';
-const CORE = ['./', './index.html', './style.css?v=18', './game.js?v=18', './audio.js?v=18', './leaderboard.js?v=18', './pwa.js?v=18', './manifest.webmanifest'];
+const CACHE = 'jellyrun-v19';
+const CORE = ['./', './index.html', './style.css?v=19', './game.js?v=19', './audio.js?v=19', './leaderboard.js?v=19', './pwa.js?v=19', './manifest.webmanifest'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

@@ -6,7 +6,7 @@ const ICE_PREPARE=2.5,ICE_LASER=1.5,ICE_RECOVER=.35,FREEZE_SECONDS=3;
 const BACKGROUND_ROUTE=['bg1','bg2','bg3','bg4','bg5','bg6','bg7','bg8','bg9','bg1','bg2','bg3alt','bg4','bg5','bg6','bg7','bg8','bg9'];
 const BOMB_BASE=150,BOMB_SCALE=1.8,BOMB_TRIGGER_TIME=.62,TRAP_HEIGHT=100,TRAP_DROP=.3;
 const names=['','보호막','에너지 충전','부활 준비','자석','스피드','거대화'];
-const effectDescriptions=['','15초간 보호막 · 피해 1회 방어!','에너지 30% 즉시 회복!','쓰러지면 에너지 10%로 부활!','10초간 주변 젤리 자동 수집!','8초간 무적! 이동 속도 3배','10초간 무적! 몸집이 3배로'];
+const effectDescriptions=['','15초간 보호막 · 피해 1회 방어!','에너지 30% 즉시 회복!','쓰러지면 에너지 10%로 부활!','10초간 주변 젤리 자동 수집!','8초간 무적! 이동 속도 3배','10초간 무적! 몸집 3배 · 속도 1.5배'];
 const speechLines=['늦었다! 에고..','오늘도 지각인가','바쁘다, 바빠','이 정도 쯤이야!'];
 const colors=['','#83e8ff','#86ff96','#ffc8ff','#ff98d6','#fff1a0','#c7a1ff'];
 const schedule=[null,{interval:20,chance:.6},{interval:25,chance:.4,guarantee:60},{interval:120,chance:.8,guarantee:240},{interval:17,chance:.7},{interval:30,chance:.6},{interval:40,chance:.65}];
@@ -17,7 +17,7 @@ function deathAudio(){soundPlayer?.endRun('death')}
 let best=0;try{best=Number(localStorage.getItem('jelly-dash-best'))||0}catch{} $('best').textContent=best.toLocaleString();
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function load(key,path){return new Promise((resolve,reject)=>{let im=new Image();im.onload=()=>{assets[key]=im;resolve()};im.onerror=()=>reject(new Error(path));im.src=path})}
-function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0,burn:0,burnTick:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0,lastShout:-10,goblins:[],nextGoblin:17,pendingGoblin:false,nextPortal:90,portal:null,pendingPortal:false,nextBonusJelly:30,bonus:null,bonusSeconds:0,destroyScore:0,giantEffectPending:false}}
+function fresh(){return {mode:'ready',t:0,score:0,jellyScore:0,meters:0,jellies:0,stage:1,speed:BASE_SPEED,distance:0,bg:0,energy:100,p:{x:220,y:0,vy:0,jumps:0,scale:1,anim:0,hit:0,blink:0,inv:0,land:0,coyote:0,falling:false,frozen:0,frozenPose:null,panic:0,burn:0,burnTick:0},buff:{1:0,4:0,5:0,6:0},revive:false,fx:[],gaps:[],patternBag:[],lastPattern:null,obstacles:[],pickups:[],nextPattern:1.5,nextItems:schedule.map(v=>v?.interval||0),nextGuarantees:schedule.map(v=>v?.guarantee||Infinity),toast:0,death:0,shake:0,heal:0,resurrection:0,particleTimer:0,nextSpeech:25,speech:null,itemNotice:null,pirates:[],projectiles:[],nextPirate:30,nextPirateGuarantee:120,iceMonsters:[],batters:[],baseballs:[],bombs:[],nextBomb:13,pendingBomb:false,nextBaseball:20,nextBaseballGuarantee:150,pendingBaseball:false,encounterQueue:[],nextAmbient:68,nextIce:40,pendingIce:false,pendingPirate:false,encounterUntil:0,lastShout:-10,goblins:[],goblinFollowup:null,nextGoblin:17,pendingGoblin:false,nextPortal:90,portal:null,pendingPortal:false,nextBonusJelly:30,bonus:null,bonusSeconds:0,destroyScore:0,giantEffectPending:false}}
 s=fresh();
 function tone(freq=600,duration=.08){if(!sound||soundPlayer?.master===0)return;try{audio ||=new(window.AudioContext||window.webkitAudioContext)();audio.resume();const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,audio.currentTime);osc.frequency.exponentialRampToValueAtTime(freq*.65,audio.currentTime+duration);gain.gain.setValueAtTime(.055*(soundPlayer?.master??1),audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);osc.connect(gain).connect(audio.destination);osc.start();osc.stop(audio.currentTime+duration)}catch{}}
 function toast(text){$('toast').textContent=text;s.toast=2.5;$('toast').style.opacity=1}
@@ -51,7 +51,7 @@ function unlockLandscape(fromPop=false){
 function returnToApp(fromPop=false){if(s.mode==='running')pause();unlockLandscape(fromPop)}
 document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement){fullscreenNative=true}else if(fullscreenNative&&fullscreenSession)returnToApp()});
 window.addEventListener('popstate',()=>{if(fullscreenSession)returnToApp(true)});
-function start(){if(!ready)return;s=fresh();s.mode='running';slideHeld=false;accumulator=0;$('overlay').classList.add('hidden');$('overlay').classList.remove('game-over');$('toast').style.opacity=0;document.querySelector('.arena').classList.add('playing');$('pause').disabled=false;$('pause').textContent='Ⅱ 일시정지';document.querySelector('.live').textContent='● NOW RUNNING';soundPlayer?.startRun();lockLandscape();hud()}
+function start(){if(!ready)return;s=fresh();s.mode='running';s.speech={text:'악 지각이다!',until:2,scream:true};slideHeld=false;accumulator=0;$('overlay').classList.add('hidden');$('overlay').classList.remove('game-over');$('toast').style.opacity=0;document.querySelector('.arena').classList.add('playing');$('pause').disabled=false;$('pause').textContent='Ⅱ 일시정지';document.querySelector('.live').textContent='● NOW RUNNING';soundPlayer?.startRun();lockLandscape();hud()}
 function pause(){if(!['running','paused'].includes(s.mode))return;slideHeld=false;if(s.mode==='running'){s.mode='paused';soundPlayer?.pause();audio?.suspend?.();panel('잠깐,<br><em>쉬어가기.</em>','모험은 여기서 기다릴게요.','계속 달리기 →','TAKE A BREATHER');$('pause').textContent='▶ 계속하기'}else{s.mode='running';soundPlayer?.resume();audio?.resume?.();$('overlay').classList.add('hidden');$('pause').textContent='Ⅱ 일시정지'}}
 function panel(title,desc,button,eyebrow){$('title').innerHTML=title;$('description').textContent=desc;$('start').textContent=button;$('eyebrow').textContent=eyebrow;$('overlay').classList.remove('hidden');document.querySelector('.hero').style.display='none'}
 function finish(){s.mode='over';soundPlayer?.endRun('gameOver');unlockLandscape();s.shake=0;s.itemNotice=null;s.speech=null;$('toast').style.opacity=0;$('overlay').classList.add('game-over');best=Math.max(best,s.score);try{localStorage.setItem('jelly-dash-best',String(best))}catch{}$('best').textContent=best.toLocaleString();$('pause').disabled=true;document.querySelector('.arena').classList.remove('playing');panel(`<span class="result-label">FINAL SCORE</span><em class="result-score">${s.score.toLocaleString()}</em><span class="result-unit">POINTS</span>`,`${s.meters.toLocaleString()}m · 젤리 ${s.jellyScore.toLocaleString()}점 · 파괴 ${s.destroyScore.toLocaleString()}점 · ${formatTime(s.t+s.bonusSeconds)}`,'한 번 더 달리기 →','EVERY RUN IS A NEW ADVENTURE');document.querySelector('.live').textContent='● RUN COMPLETE';if(typeof CustomEvent==='function')window.dispatchEvent?.(new CustomEvent('jellyrun:finished',{detail:{score:s.score,distance:s.meters,seconds:s.t+s.bonusSeconds,time:formatTime(s.t+s.bonusSeconds)}}))}
@@ -62,9 +62,9 @@ function endSlide(){slideHeld=false}
 function box(){const p=s.p,k=p.scale,sl=sliding();return {x:p.x-33*k,y:GROUND-p.y-(sl?48:96)*k,w:66*k,h:(sl?44:90)*k}}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function jellyType(){const r=Math.random()*1.3;return r<1?1:r<1.25?2:3}
-function pickup(type,id,x,y){const size=type==='bonus'?54:type==='item'?48:id===3?60:30;s.pickups.push({type,id,x,y,w:size,h:size,phase:rand(0,6)})}
+function pickup(type,id,x,y){const large=type==='jelly'&&id===1&&Math.random()<.2,size=(type==='bonus'?54:type==='item'?48:id===3?60:30)*(large?1.3:1);s.pickups.push({type,id,x,y,w:size,h:size,large,phase:rand(0,6)})}
 // Predict world travel including known stage changes and the current speed buff ending.
-function travelDistance(from,to){let distance=0;for(let t=from;t<to;){const boostEnd=s.t+s.buff[5],edge=Math.min(to,(Math.floor(t/45)+1)*45,boostEnd>t+1e-7?boostEnd:Infinity);const speed=BASE_SPEED*Math.pow(1.13,Math.floor(t/45))*(t<boostEnd-1e-7?3:1);distance+=(edge-t)*speed;t=edge}return distance}
+function travelDistance(from,to){let distance=0;for(let t=from;t<to;){const boostEnd=s.t+s.buff[5],giantEnd=s.t+s.buff[6],edge=Math.min(to,(Math.floor(t/45)+1)*45,boostEnd>t+1e-7?boostEnd:Infinity,giantEnd>t+1e-7?giantEnd:Infinity);const speed=BASE_SPEED*Math.pow(1.13,Math.floor(t/45))*(t<boostEnd-1e-7?3:1)*(t<giantEnd-1e-7?1.5:1);distance+=(edge-t)*speed;t=edge}return distance}
 function nextPatternType(){
  if(s.t<5)return 'low';
  if(!s.patternBag.length){s.patternBag=['low','row','stack','tall','zigzag','air','slide2','slide3','combo','gapShort','gapLong','tunnel'];for(let i=s.patternBag.length-1;i>0;i--){const j=Math.floor(rand(0,i+1));[s.patternBag[i],s.patternBag[j]]=[s.patternBag[j],s.patternBag[i]]}}
@@ -121,7 +121,7 @@ function spawnPirate(){if(!canStartEncounter()){requestEncounter('pirate');retur
  s.encounterUntil=s.t+4;s.nextPattern=Math.max(s.nextPattern,s.encounterUntil+.8);
  const pirate={x:W-125,y:GROUND-145,w:100,h:145,phase:'attack',hit:false,spawn:s.t,maxShots:Math.random()<.3?4:3,shots:0,nextShot:s.t,lastShot:s.t};s.pirates.push(pirate);playSfx('pirateIntro',{channel:'pirateIntro',limit:2.5});playSfx('pirateAttack',{channel:'pirateAttack',limit:.3});fire(pirate);toast(`해적왕 등장! 불꽃 ${pirate.maxShots}연발 · 피해 40%`);
 }
-function updatePirates(dt){let spawn=false;if(s.t>=s.nextPirate){s.nextPirate+=30;spawn=Math.random()<.75}if(s.t>=s.nextPirateGuarantee){s.nextPirateGuarantee+=120;spawn=true}if(spawn)requestEncounter('pirate');
+function updatePirates(dt){let spawn=false;if(s.t>=s.nextPirate){s.nextPirate+=30;spawn=Math.random()<.83}if(s.t>=s.nextPirateGuarantee){s.nextPirateGuarantee+=120;spawn=true}if(spawn)requestEncounter('pirate');
  for(const m of s.pirates){
   if(m.shots<m.maxShots&&s.t>=m.nextShot)fire(m);
   if(m.phase==='attack'&&m.shots===m.maxShots&&s.t-m.lastShot>=.42){m.phase='obstacle';toast('해적왕을 뛰어넘으세요! SPACE · 점프')}
@@ -164,7 +164,7 @@ function updateIce(dt){
  }
  s.iceMonsters=s.iceMonsters.filter(m=>m.x+140> -100&&!m.destroyed);if(!s.iceMonsters.length)soundPlayer?.stopChannel('iceIntro');
 }
-function hasSpecialMonster(){return s.pirates.length>0||s.iceMonsters.length>0||s.batters.length>0||s.projectiles.length>0||s.baseballs.length>0||s.goblins.length>0}
+function hasSpecialMonster(){return s.goblinFollowup!==null||s.pirates.length>0||s.iceMonsters.length>0||s.batters.length>0||s.projectiles.length>0||s.baseballs.length>0||s.goblins.length>0}
 function canStartEncounter(){return !s.bonus&&!s.portal&&!hasSpecialMonster()&&s.bombs.length===0&&!s.obstacles.some(o=>!o.destroyed&&o.x+o.w>s.p.x-100)&&!s.gaps.some(o=>o.x+o.w>s.p.x-100)}
 function requestEncounter(kind){const flag={pirate:'pendingPirate',ice:'pendingIce',baseball:'pendingBaseball',goblin:'pendingGoblin'}[kind];s[flag]=true;if(!s.encounterQueue.includes(kind))s.encounterQueue.push(kind)}
 function processEncounters(){if(s.pendingPortal||!canStartEncounter()||s.p.frozen>0||s.p.panic>0||!s.encounterQueue.length)return;const kind=s.encounterQueue.shift();s[{pirate:'pendingPirate',ice:'pendingIce',baseball:'pendingBaseball',goblin:'pendingGoblin'}[kind]]=false;if(kind==='pirate')spawnPirate();else if(kind==='ice')spawnIce();else if(kind==='goblin')spawnGoblin();else spawnBaseball()}
@@ -210,12 +210,13 @@ function bombFlashRate(b){return 2+14*clamp(1-Math.max(0,b.x-s.p.x)/(W-s.p.x),0,
 function bombBounds(b){return {x:b.x-75,y:GROUND-220,w:150,h:220}}
 function updateBombs(dt){
  if(s.t>=s.nextBomb){s.nextBomb+=13;if(Math.random()<.68)s.pendingBomb=true}if(s.pendingBomb&&!s.bombs.length)spawnBomb();
- for(const b of s.bombs){b.x-=s.speed*dt;b.flash+=dt*bombFlashRate(b);b.age+=dt;
+ for(const b of s.bombs){b.x-=s.speed*dt;if((b.phase==='armed'||b.phase==='igniting')&&b.x-b.w/2<W&&!soundPlayer?.channels?.has('bombAlarm'))playSfx('bombAlarm',{channel:'bombAlarm',loop:true});b.flash+=dt*bombFlashRate(b);b.age+=dt;
   if(b.phase==='armed'&&b.x-s.p.x<=Math.max(190,s.speed*BOMB_TRIGGER_TIME)){b.phase='igniting';b.age=0;tone(180,.12)}
-  else if(b.phase==='igniting'&&b.age>=.16){b.phase='exploding';b.age=0;burst(b.x,GROUND-75,'#ff9c53',32);tone(95,.25)}
+  else if(b.phase==='igniting'&&b.age>=.16){b.phase='exploding';b.age=0;burst(b.x,GROUND-75,'#ff9c53',32);soundPlayer?.stopChannel('bombAlarm');playSfx('bomb',{channel:'bombExplosion'})}
   else if(b.phase==='exploding'&&b.age>=.95){b.phase='spent';b.age=0;if(!b.hit&&!b.avoidChecked){b.avoidChecked=true;maybeShout()}}
   if(b.phase==='exploding'&&overlap(box(),bombBounds(b)))damage(b,25);
  }
+ if(!s.bombs.some(b=>!b.destroyed&&(b.phase==='armed'||b.phase==='igniting')))soundPlayer?.stopChannel('bombAlarm');
  s.bombs=s.bombs.filter(b=>!b.destroyed&&b.x+BOMB_BASE*BOMB_SCALE> -100&&!(b.phase==='spent'&&b.age>.3));
 }
 function spawnAmbientJellies(){
@@ -239,15 +240,15 @@ function update(dt){if(s.mode==='running'&&s.bonus){updateBonus(dt);return}if(s.
  for(const id of [1,4,5,6])if(s.buff[id]>0){s.buff[id]=Math.max(0,s.buff[id]-dt);if(!s.buff[id]){blink();toast(names[id]+' 효과 종료')}}
  updateBurn(dt);if(s.mode!=='running')return;
  soundPlayer?.syncSpeed?.(s.buff[5]);
- s.speed=BASE_SPEED*Math.pow(1.13,s.stage-1)*(s.buff[5]>0?3:1);s.distance+=s.speed*dt;s.bg+=s.speed*dt*.42;
- p.scale+=( (s.buff[6]>0?3:1)-p.scale)*Math.min(1,dt*9);if(s.giantEffectPending&&p.scale>=2.9){s.giantEffectPending=false;playSfx('giantEffect',{channel:'giantEffect'})}if(p.frozen<=0&&p.panic<=0)p.anim+=dt*(s.buff[5]>0?1.8:1);for(const k of ['hit','inv','blink','land'])p[k]=Math.max(0,p[k]-dt);s.shake=Math.max(0,s.shake-dt);s.heal=Math.max(0,s.heal-dt);s.resurrection=Math.max(0,s.resurrection-dt);
+ s.speed=BASE_SPEED*Math.pow(1.13,s.stage-1)*(s.buff[5]>0?3:1)*(s.buff[6]>0?1.5:1);s.distance+=s.speed*dt;s.bg+=s.speed*dt*.42;
+ p.scale+=( (s.buff[6]>0?3:1)-p.scale)*Math.min(1,dt*9);if(s.giantEffectPending&&p.scale>=2.9){s.giantEffectPending=false;playSfx('giantEffect',{channel:'giantEffect'})}if(p.frozen<=0&&p.panic<=0)p.anim+=dt*(s.buff[5]>0?1.8:1)*(s.buff[6]>0?1.5:1);for(const k of ['hit','inv','blink','land'])p[k]=Math.max(0,p[k]-dt);s.shake=Math.max(0,s.shake-dt);s.heal=Math.max(0,s.heal-dt);s.resurrection=Math.max(0,s.resurrection-dt);
  if(p.frozen>0){p.frozen=Math.max(0,p.frozen-dt);if(p.frozen<=1e-8)thawPlayer()}
  updateGround(dt);if(s.mode!=='running')return;
  if(s.t>=s.nextSpeech){s.nextSpeech+=25;s.speech={text:speechLines[Math.floor(rand(0,speechLines.length))],until:s.t+3}}
  if(s.speech&&s.t>=s.speech.until)s.speech=null;if(s.itemNotice&&s.t>=s.itemNotice.until)s.itemNotice=null;
  updatePirates(dt);if(s.mode!=='running')return;updateIce(dt);if(s.mode!=='running')return;updateBaseball(dt);if(s.mode!=='running')return;updateGoblins(dt);if(s.mode!=='running')return;processEncounters();updateBombs(dt);if(s.mode!=='running')return;
  if(!s.encounterQueue.length&&!s.portal&&!s.pendingPortal&&s.t>=s.nextPattern&&!s.obstacles.some(o=>o.type==='tunnel'&&!o.cleared)&&s.t>=s.encounterUntil&&!hasSpecialMonster()&&s.bombs.length===0&&!s.pendingBomb)pattern();
- for(let id=1;id<=6;id++){let spawn=false;if(s.t>=s.nextItems[id]){s.nextItems[id]+=schedule[id].interval;spawn=Math.random()<schedule[id].chance}if(s.t>=s.nextGuarantees[id]){s.nextGuarantees[id]+=schedule[id].guarantee;spawn=true}if(spawn)spawnItem(id)}
+ for(let id=1;id<=6;id++){let spawn=false;if(s.t>=s.nextItems[id]){s.nextItems[id]+=schedule[id].interval;spawn=Math.random()<Math.max(0,schedule[id].chance-.03*(s.stage-1))}if(s.t>=s.nextGuarantees[id]){s.nextGuarantees[id]+=schedule[id].guarantee;spawn=true}if(spawn)spawnItem(id)}
  const pb=box();for(const o of s.obstacles){o.x-=s.speed*dt;
  if(o.type==='tunnel'){
   if(o.cleared)continue;
@@ -280,7 +281,7 @@ function updatePickups(dt){
   if(q.taken||!overlap(pb,{x:q.x-q.w/2,y:q.y-q.h/2,w:q.w,h:q.h}))continue;
   q.taken=true;
   if(q.type==='item'){acquire(q.id);continue}
-  const points=q.type==='bonus'?q.points:[0,10,25,100][q.id];
+  const points=q.type==='bonus'?q.points:[0,10,25,100][q.id]*(q.large?1.3:1);
   s.score+=points;s.jellyScore+=points;s.jellies++;
   burst(q.x,q.y,q.type==='bonus'?'#f7c1ff':['','#ffe99b','#ffb7db','#d9b9ff'][q.id],7);
   floating('+'+points,q.x,q.y-18,'#fff1a3');
@@ -296,11 +297,16 @@ function spawnRareJelly(){
 function bonusJelly(x,y,points){pickup('bonus',1+Math.floor(Math.random()*5),x,y);s.pickups.at(-1).points=points}
 function spawnGoblin(){
  if(!canStartEncounter()){requestEncounter('goblin');return false}
+ s.goblinFollowup=Math.random()<.4?1:null;
+ addGoblin();return true;
+}
+function addGoblin(){
  const stop=Math.random()<.5;
  s.goblins.push({x:W+80,y:GROUND-100,w:85,h:100,phase:'run',age:0,hit:false,willStop:stop,stopX:s.p.x+(W-s.p.x)*rand(.4,.7),remaining:2});
  playSfx('goblin',{channel:'goblinIntro'});return true;
 }
 function updateGoblins(dt){
+ if(s.goblinFollowup!==null){s.goblinFollowup-=dt;if(s.goblinFollowup<=1e-8){s.goblinFollowup=null;addGoblin()}}
  if(s.t>=s.nextGoblin){s.nextGoblin+=17;if(Math.random()<.5)requestEncounter('goblin')}
  for(const m of s.goblins){
   const previous=m.x;m.age+=dt;
@@ -351,9 +357,27 @@ function enterBonus(){
 function activateBonus(){
  s.bonus=null;const saved=s;
  s=fresh();s.mode='running';s.score=saved.score;s.jellyScore=saved.jellyScore;s.destroyScore=saved.destroyScore;s.jellies=saved.jellies;
- s.energy=saved.energy;s.meters=saved.meters;s.t=saved.t;s.stage=saved.stage;s.p.x=saved.p.x;s.speed=BASE_SPEED*1.4;
- s.bonus={phase:'active',elapsed:0,nextWave:.4,wave:0,saved};
- for(let x=s.p.x+100,i=0;x<W+160;x+=75,i++)bonusJelly(x,GROUND-(i%8<4?60:180),100);
+ s.energy=saved.energy;s.meters=saved.meters;s.t=saved.t;s.stage=saved.stage;s.p.x=saved.p.x;s.speed=saved.speed*1.5;
+ s.bonus={phase:'active',elapsed:0,nextWave:0,patternBag:[],lastPattern:null,saved};
+ spawnBonusPattern(s.p.x+100);
+}
+function spawnBonusPattern(origin){
+ const b=s.bonus;
+ if(!b.patternBag.length){b.patternBag=['arc','wave','stairs','diamond','double','zigzag','heart','columns'];for(let i=b.patternBag.length-1;i>0;i--){const j=Math.floor(rand(0,i+1));[b.patternBag[i],b.patternBag[j]]=[b.patternBag[j],b.patternBag[i]]}if(b.patternBag[0]===b.lastPattern)b.patternBag.reverse()}
+ const type=b.patternBag.shift();b.lastPattern=type;
+ const spacing=rand(58,78),height=rand(160,240),count=12;
+ for(let i=0;i<count;i++){const t=i/(count-1),x=origin+i*spacing;let ys;
+ if(type==='arc')ys=[60+Math.sin(t*Math.PI)*height];
+ else if(type==='wave')ys=[170+Math.sin(t*Math.PI*2)*110];
+ else if(type==='stairs')ys=[60+(i%4)*65];
+ else if(type==='diamond')ys=[170+(1-Math.abs(t*2-1))*110,170-(1-Math.abs(t*2-1))*110];
+ else if(type==='double')ys=[65,210];
+ else if(type==='zigzag')ys=[60+(1-Math.abs((t*4%2)-1))*height];
+ else if(type==='heart'){const a=t*Math.PI*2;bonusJelly(origin+350+240*Math.sin(a)**3,GROUND-190-9*(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a)),100);continue}
+ else ys=i%2?[65]:[65,135,205,275];
+ for(const y of ys)bonusJelly(x,GROUND-y,100);
+ }
+ b.nextWave=b.elapsed+(origin+(count-1)*spacing+100-(W+60))/s.speed;
 }
 function restoreNormalWorld(){
  const bonus=s,normal=bonus.bonus.saved;
@@ -369,10 +393,10 @@ function updateBonus(dt){
   return;
  }
  const activeDt=Math.min(dt,15-b.elapsed);b.elapsed+=activeDt;
- s.distance+=s.speed*activeDt;s.bg+=s.speed*activeDt*.42;s.p.anim+=activeDt;
+ s.distance+=s.speed*activeDt;s.bg+=s.speed*activeDt*.42;s.p.anim+=activeDt*1.5;
  for(const k of ['hit','inv','blink','land'])s.p[k]=Math.max(0,s.p[k]-activeDt);
  updateGround(activeDt);
- if(b.elapsed>=b.nextWave){b.nextWave+=.4;const height=[60,60,180,280,180,60][b.wave++%6];for(let i=0;i<3;i++)bonusJelly(W+40+i*65,GROUND-height,100)}
+ if(b.elapsed>=b.nextWave)spawnBonusPattern(W+60);
  updatePickups(activeDt);updateFx(activeDt);
  if(b.elapsed>=15-1e-8){b.phase='exit';b.elapsed=0;endSlide();playSfx('bonus',{channel:'bonusTransition'})}
 }
@@ -463,8 +487,8 @@ function drawBaseball(){const frames=[{sx:0,w:575,anchor:315},{sx:575,w:875,anch
  for(const b of s.baseballs){ctx.save();ctx.translate(b.x,b.y);ctx.strokeStyle='#ffd68190';ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(100,0);ctx.stroke();ctx.rotate(b.age*12);ctx.shadowColor='#ffd16e';ctx.shadowBlur=22;ctx.fillStyle='#fffaf0';ctx.beginPath();ctx.arc(0,0,30,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#d74343';ctx.lineWidth=3;for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*14,-25);ctx.quadraticCurveTo(side*2,0,side*14,25);ctx.stroke();for(let j=-16;j<=16;j+=8){ctx.beginPath();ctx.moveTo(side*9-4,j-2);ctx.lineTo(side*9+4,j+2);ctx.stroke()}}ctx.restore()}
 }
 function drawPanic(){const p=s.p;if(p.panic<=0)return;ctx.save();const x=p.x,y=GROUND-p.y-CELL*p.scale;for(let i=0;i<3;i++){const a=s.t*7+i*Math.PI*2/3;ctx.fillStyle=['#ffd68e','#ffa5cf','#d1b1ff'][i];ctx.beginPath();ctx.arc(x+Math.cos(a)*43,y+Math.sin(a)*13-10,5,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#ffd5ea';ctx.font='bold 17px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText('STUN! '+p.panic.toFixed(1)+'s',x,y-35);ctx.restore()}
-function bubble(text,x,y,color){ctx.font='bold 18px "Malgun Gothic", sans-serif';const w=Math.min(530,(ctx.measureText(text).width||text.length*18)+32);x=clamp(x,w/2+10,W-w/2-10);ctx.fillStyle='#10252eef';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-w/2,y-32,w,44,12);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(x-8,y+12);ctx.lineTo(x,y+22);ctx.lineTo(x+8,y+12);ctx.fill();ctx.fillStyle=color;ctx.textAlign='center';ctx.fillText(text,x,y-3)}
-function drawNotices(){if(s.mode==='over'||s.mode==='dying')return;const p=s.p;ctx.save();if(s.speech)bubble(s.speech.text,p.x,Math.max(150,GROUND-p.y-CELL*p.scale-28),'#faffed');if(s.itemNotice){const n=s.itemNotice,age=3-(n.until-s.t);ctx.globalAlpha=Math.min(1,(n.until-s.t)*3,age*6);bubble(n.text,clamp(p.x+200,270,W-280),Math.max(215,GROUND-p.y-CELL*p.scale-100-(s.speech?45:0)),colors[n.id])}ctx.restore()}
+function bubble(text,x,y,color,scream=false){ctx.font='bold 18px "Malgun Gothic", sans-serif';const w=Math.min(530,(ctx.measureText(text).width||text.length*18)+32);x=clamp(x,w/2+10,W-w/2-10);ctx.fillStyle='#10252eef';ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();if(scream){for(let i=0;i<32;i++){const a=i*Math.PI/16,r=i%2?.86:1,px=x+Math.cos(a)*(w/2+12)*r,py=y-10+Math.sin(a)*36*r;if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py)}ctx.closePath()}else ctx.roundRect(x-w/2,y-32,w,44,12);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(x-8,y+12);ctx.lineTo(x,y+22);ctx.lineTo(x+8,y+12);ctx.fill();ctx.fillStyle=color;ctx.textAlign='center';ctx.fillText(text,x,y-3)}
+function drawNotices(){if(s.mode==='over'||s.mode==='dying')return;const p=s.p;ctx.save();if(s.speech)bubble(s.speech.text,p.x,Math.max(150,GROUND-p.y-CELL*p.scale-28),'#faffed',s.speech.scream);if(s.itemNotice){const n=s.itemNotice,age=3-(n.until-s.t);ctx.globalAlpha=Math.min(1,(n.until-s.t)*3,age*6);bubble(n.text,clamp(p.x+200,270,W-280),Math.max(215,GROUND-p.y-CELL*p.scale-100-(s.speech?45:0)),colors[n.id])}ctx.restore()}
 function draw(){ctx.clearRect(0,0,W,H);if(!ready)return;ctx.save();if(s.mode==='running'&&s.shake>0)ctx.translate(rand(-5,5),rand(-4,4));bg();for(const q of s.pickups){const bob=Math.sin(s.t*4+q.phase)*3;ctx.save();if(q.type==='item'){ctx.shadowColor=colors[q.id];ctx.shadowBlur=18;ring(q.x,q.y+bob,31+Math.sin(s.t*4)*2,colors[q.id]+'99',2)}let im=assets[q.type+q.id];ctx.drawImage(im,q.x-q.w/2,q.y-q.h/2+bob,q.w,q.h);ctx.restore()}for(const o of s.obstacles)monster(o);drawBombs();drawPirates();drawIce();drawBaseball();drawGoblins();drawPortal();drawBurn(false);if(s.mode!=='ready')character();drawBurn(true);drawFrozen();drawPanic();drawNotices();for(const f of s.fx){ctx.globalAlpha=clamp(f.life/f.max,0,1);ctx.fillStyle=f.color;if(f.text){ctx.font='bold 20px "Malgun Gothic", sans-serif';ctx.textAlign='center';ctx.fillText(f.text,f.x,f.y)}else{ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,7);ctx.fill()}}ctx.globalAlpha=1;drawBonusTransition();ctx.restore()}
 function frame(now){const dt=Math.min((now-last)/1000||0,.1);last=now;if(s.mode==='ready')decor+=dt*30;if(s.mode==='running'||s.mode==='dying'){accumulator+=dt;while(accumulator>=1/120){update(1/120);accumulator-=1/120}}else accumulator=0;draw();hud();requestAnimationFrame(frame)}
 $('start').onclick=()=>s.mode==='paused'?pause():start();$('pause').onclick=pause;$('gamePause').onclick=pause;$('exitGameFullscreen').onclick=()=>returnToApp();$('sound').onclick=()=>{sound=!sound;soundPlayer?.setEnabled(sound);$('sound').textContent='소리 '+(sound?'ON':'OFF');$('sound').setAttribute?.('aria-pressed',String(sound));if(!sound)audio?.suspend?.()};

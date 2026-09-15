@@ -1,6 +1,7 @@
 ﻿'use strict';
 (() => {
   const FILES = {
+    bomb:'bomb.mp3', bombAlarm:'bomb_alram.mp3',
     giant:'big item.mp3', giantEffect:'big effect.mp3', heart:'item_heart.mp3', magnet:'item_magnet.mp3', shield:'item_shield.mp3', speed:'item_speed.mp3',
     goblin:'goblin.mp3', goblinRun:'goblin2.mp3', portal:'portal.mp3', bonus:'bonus_effect.mp3',
     jelly1:'jelly.mp3', jelly2:'jelly2.mp3', jelly3:'special jelly.mp3', jump:'jump.mp3', death:'death.mp3', gameOver:'gameover.mp3',
@@ -23,7 +24,7 @@
         track.addEventListener('error',()=>{if(index!==this.musicIndex)return;if(++this.musicFailures<MUSIC.length)this.nextMusic()});
       });
     }
-    make(file){if(!this.AudioClass)return null;const a=new this.AudioClass('bgm/'+encodeURIComponent(file)+'?v=13');a.preload='auto';return a}
+    make(file){if(!this.AudioClass)return null;const a=new this.AudioClass('bgm/'+encodeURIComponent(file)+'?v=19');a.preload='auto';return a}
     play(a){if(!a)return;try{const p=a.play();if(p?.catch)p.catch(()=>{})}catch{}}
     syncVolume(){for(const a of this.tracks)if(a)a.volume=this.master*.7;for(const v of this.voices)v.audio.volume=this.master*v.gain}
     setVolume(value){this.master=Math.max(0,Math.min(1,Number(value)||0));this.syncVolume()}

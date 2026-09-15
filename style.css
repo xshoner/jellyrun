@@ -30,3 +30,13 @@ body.game-active.embedded-game .arena{inset:0;margin:0;width:100vw;height:100dvh
 .arena.playing .stage{margin-top:46px}
 .bonus-timer{position:absolute;top:24%;left:50%;transform:translateX(-50%);padding:8px 20px;border:1px solid #f3c9ff;background:#311453dd;border-radius:24px;font-size:20px;font-weight:900;color:#ffeaff;pointer-events:none}
 @media(max-width:600px){.game-actions{right:8px;top:8px;gap:4px}.game-actions button{font-size:12px;min-height:34px;padding:6px 8px}.arena.playing .stage{margin-top:40px}.bonus-timer{font-size:16px}}
+
+/* Preserve the 1280?720 game coordinates and letterbox unused screen space. */
+body.game-active:not(.desktop-game){background:#000}
+body.game-active:not(.desktop-game) .arena{inset:50% auto auto 50%;margin:0;width:min(100vw,177.777778dvh);height:min(100dvh,56.25vw);aspect-ratio:16/9;transform:translate(-50%,-50%);transform-origin:center}
+@media(max-width:1000px) and (orientation:portrait){
+ body.game-active:not(.desktop-game):not(.embedded-game) .arena{width:min(100dvh,177.777778vw);height:min(100vw,56.25dvh);transform:translate(-50%,-50%) rotate(90deg)}
+}
+.touch{inset:auto 4% 5%;z-index:7}
+.touch button{width:clamp(90px,14vw,150px);height:clamp(48px,8vw,72px);padding:8px;border:2px solid #ffffffc9;border-radius:50%;background:#10272166;color:#fff;font-size:clamp(16px,2.4vw,23px);font-weight:900;letter-spacing:1px;text-shadow:0 2px 4px #000;box-shadow:0 2px 12px #0005}
+.touch button:active{background:#d6ff6377;border-color:#d6ff63}

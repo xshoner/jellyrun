@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101510">
   <meta name="description" content="젤리를 모으고 장애물을 피하며 최고 기록에 도전하는 러닝 게임">
-  <title>지각만큼은 안돼!</title>
+  <title>젤리런 GO! - 지각 극복</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <main class="shell">
     <header>
-      <a class="brand" href="./index.html"><span>✦</span> 지각만큼은 안돼! <small>오늘도 출근길은 모험이다</small></a>
+      <a class="brand" href="./index.html"><span>✦</span> 젤리런 GO! - 지각 극복 <small>오늘도 출근길은 모험이다</small></a>
       <div class="header-actions">
         <span class="live">● READY TO RUN</span>
         <button id="install" class="install-button" hidden>앱으로 저장</button>
@@ -33,10 +33,10 @@
       <div class="game-actions"><button id="exitGameFullscreen" hidden aria-label="전체화면 나가기">↙ 화면 줄이기</button><button id="gamePause" hidden aria-pressed="false">Ⅱ 일시정지</button></div>
       <div id="bonusTimer" class="bonus-timer" hidden></div>
       <div class="overlay" id="overlay">
-        <div class="intro"><span class="eyebrow" id="eyebrow">A LITTLE SWEET. A LITTLE WILD.</span><h1 id="title" class="korean-title">지각만큼은<br><em>안돼!</em></h1><p id="description">젤리를 모으고, 몬스터를 피하고.<br>당신의 최고 기록을 향해 달려보세요.</p><button class="primary" id="start" disabled>에셋 불러오는 중…</button><div class="intro-controls"><span><kbd>SPACE</kbd> 점프 / 2단 점프</span><span><kbd>↓</kbd> 길게 눌러 슬라이딩</span></div></div>
+        <div class="intro"><span class="eyebrow" id="eyebrow">A LITTLE SWEET. A LITTLE WILD.</span><h1 id="title" class="korean-title">젤리런 GO!<br><em>- 지각 극복</em></h1><p id="description">젤리를 모으고, 몬스터를 피하고.<br>당신의 최고 기록을 향해 달려보세요.</p><button class="primary" id="start" disabled>에셋 불러오는 중…</button><div class="intro-controls"><span><kbd>SPACE</kbd> 점프 / 2단 점프</span><span><kbd>↓</kbd> 길게 눌러 슬라이딩</span></div></div>
         <div class="hero"><div class="hero-ring"></div><div class="hero-sprite"></div><span class="hero-tag">오늘의 주인공은 당신 ✦</span></div>
       </div>
-      <div class="touch"><button id="slide">↓ <span>SLIDE</span></button><button id="jump">↑ <span>JUMP</span></button></div>
+      <div class="touch"><button id="jump" aria-label="JUMP">JUMP</button><button id="slide" aria-label="SLIDE">SLIDE</button></div>
     </section>
 
     <footer><span>● THE SWEETEST ESCAPE</span><div><kbd>SPACE</kbd> 2단 점프 <kbd>↓</kbd> 슬라이딩 <kbd>P / ESC</kbd> 일시정지</div><span>45초마다 더 짜릿하게 ↗</span></footer>
@@ -49,7 +49,7 @@
         <article><img src="item/item3.png" alt="부활"><b>부활</b><span>쓰러지면 에너지 10%로 부활</span></article>
         <article><img src="item/item4.png" alt="자석"><b>자석</b><span>10초 동안 주변 젤리 자동 수집</span></article>
         <article><img src="item/item5.png" alt="스피드"><b>스피드</b><span>8초 동안 3배 속도와 무적</span></article>
-        <article><img src="item/item6.png" alt="거대화"><b>거대화</b><span>10초 동안 3배 크기와 무적</span></article>
+        <article><img src="item/item6.png" alt="거대화"><b>거대화</b><span>10초 무적 · 크기 3배 · 속도 1.5배</span></article>
       </div>
     </section>
     <div class="legend"><span>EVERY JELLY COUNTS</span><img src="jelly/jelly1.png" alt="기본">10 <img src="jelly/jelly2.png" alt="중급">25 <img src="jelly/jelly3.png" alt="스페셜">100<small>게임이 끝나면 Firebase 순위표에 기록할 수 있습니다.</small></div>
@@ -66,9 +66,9 @@
   </section>
 
   <div id="rotateHint" class="rotate-hint" hidden>가로 화면으로 전환하고 있어요…</div>
-  <script src="audio.js?v=18"></script>
-  <script src="game.js?v=18"></script>
-  <script type="module" src="leaderboard.js?v=18"></script>
-  <script src="pwa.js?v=18"></script>
+  <script src="audio.js?v=19"></script>
+  <script src="game.js?v=19"></script>
+  <script type="module" src="leaderboard.js?v=19"></script>
+  <script src="pwa.js?v=19"></script>
 </body>
 </html>
