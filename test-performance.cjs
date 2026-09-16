@@ -1,6 +1,6 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const drawCalls=[];const elements=new Map();const element=id=>{if(!elements.has(id))elements.set(id,{style:{},classList:{add(){},remove(){}},addEventListener(){},getContext(){return new Proxy({drawImage(...args){drawCalls.push(args)},measureText(t){return {width:t.length*16}},createLinearGradient(){return {addColorStop(){}}},createRadialGradient(){return {addColorStop(){}}}},{get(t,p){return t[p]||(()=>{})}})}});return elements.get(id)};
-const math=Object.create(Math);const sandbox={document:{getElementById:element,querySelector:element,addEventListener(){}},window:{addEventListener(){}},location:{search:'?test'},URLSearchParams,Image:class{set src(v){this.path=v;this.width=v.startsWith('barrier4')||v.startsWith('barrier5')?1774:v.startsWith('main character_1')?1397:1983;this.height=v.startsWith('barrier4')||v.startsWith('barrier5')?887:v.startsWith('main character_1')?341:793;this.onload()}},localStorage:{getItem(){return null},setItem(){}},requestAnimationFrame(){},Math:math,console};
+const math=Object.create(Math);const sandbox={document:{getElementById:element,querySelector:element,addEventListener(){}},window:{addEventListener(){}},location:{search:'?test'},URLSearchParams,Image:class{set src(v){v=v.replace(/^optimized\//,'').replace('bg_image/optimized/','bg_image/').replace('.webp','.png');this.path=v;this.width=v.startsWith('barrier4')||v.startsWith('barrier5')?1774:v.startsWith('main character_1')?1397:1983;this.height=v.startsWith('barrier4')||v.startsWith('barrier5')?887:v.startsWith('main character_1')?341:793;this.onload()}},localStorage:{getItem(){return null},setItem(){}},requestAnimationFrame(){},Math:math,console};
 
 let paints=0,hudWrites=0;
 sandbox.document.createElement=()=>({getContext:()=>({drawImage(){},globalAlpha:1})});
@@ -41,4 +41,10 @@ vm.runInContext(fs.readFileSync('game.js','utf8').replace('get state(){return s}
  assert.ok(g.state.fx.filter(f=>!f.text).length<=120,'burst particles remain bounded');
  g.draw();
  console.log('PASS sustained load adaptation, fixed physics and bounded particles');
+ g.start();g.pattern('slide2');const tunnel=g.state.obstacles[0],tiles=g.tunnelTiles(tunnel),first=tiles[0];
+ tunnel.x-=100;tunnel.w+=20;
+ assert.equal(g.tunnelTiles(tunnel),tiles);assert.equal(tiles[0],first);assert.equal(first.x,tunnel.x);
+ assert.ok(Math.abs(tiles.at(-1).x+tiles.at(-1).w-(tunnel.x+tunnel.w))<1e-8);
+ const effects=g.state.fx;g.acquire(1);g.update(1/120);assert.equal(g.state.fx,effects);
+ console.log('PASS tunnel geometry and particle storage are reused without stale positions');
 })().catch(e=>{console.error(e);process.exitCode=1});

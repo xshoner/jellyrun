@@ -11,5 +11,5 @@ out = root / 'bg_image' / 'optimized'
 out.mkdir(exist_ok=True)
 for source in sorted((root / 'bg_image').glob('*.png')):
     with Image.open(source) as image:
-        image.thumbnail((1440, 576), Image.Resampling.LANCZOS)
-        image.convert('RGB').save(out / (source.stem + '.webp'), quality=88, method=6)
+        image.thumbnail((1280, 512), Image.Resampling.LANCZOS)
+        image.convert('RGB').save(out / (source.stem + '.webp'), quality=78, method=6)

@@ -15,37 +15,42 @@
   };
   const MUSIC = ['bgm001.mp3','bgm002.mp3','bmg003.mp3','bmg004.mp3','bgm005.mp3'];
   class GameAudio {
-    constructor({AudioClass=globalThis.Audio}={}) {
+    constructor({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now()}={}) {
       this.AudioClass=AudioClass;this.enabled=true;this.master=1;this.running=false;this.paused=false;
       this.musicIndex=0;this.musicFailures=0;this.voices=new Set();this.channels=new Map();this.sequences=new Map();this.pools=new Map();
-      this.tracks=MUSIC.map(file=>this.make(file));
-      this.tracks.forEach((track,index)=>{if(!track)return;track.volume=.7;
+      this.now=now;this.lastJelly=-Infinity;this.activeAudio=new Map();
+      this.maxVoices=globalThis.matchMedia?.('(pointer: coarse)').matches?8:16;
+      this.tracks=MUSIC.map(file=>this.make(file,'none'));
+      this.tracks.forEach((track,index)=>{if(!track)return;track.volume=.7;track.preload='none';
         track.addEventListener('ended',()=>{if(index!==this.musicIndex)return;this.musicFailures=0;this.nextMusic()});
         track.addEventListener('error',()=>{if(index!==this.musicIndex)return;if(++this.musicFailures<MUSIC.length)this.nextMusic()});
       });
     }
-    make(file){if(!this.AudioClass)return null;const a=new this.AudioClass('bgm/'+encodeURIComponent(file)+'?v=19');a.preload='auto';return a}
+    make(file,preload='auto'){if(!this.AudioClass)return null;const a=new this.AudioClass('bgm/'+encodeURIComponent(file)+'?v=19');a.preload=preload;return a}
     play(a){if(!a)return;try{const p=a.play();if(p?.catch)p.catch(()=>{})}catch{}}
     syncVolume(){for(const a of this.tracks)if(a)a.volume=this.master*.7;for(const v of this.voices)v.audio.volume=this.master*v.gain}
-    setVolume(value){this.master=Math.max(0,Math.min(1,Number(value)||0));this.syncVolume()}
-    playMusic(){if(this.running&&!this.paused&&this.enabled)this.play(this.tracks[this.musicIndex])}
+    setVolume(value){const wasSilent=this.master===0;this.master=Math.max(0,Math.min(1,Number(value)||0));this.syncVolume();if(this.master===0){this.stopMusic();this.stopEffects()}else if(wasSilent)this.playMusic()}
+    playMusic(){if(this.running&&!this.paused&&this.enabled&&this.master>0)this.play(this.tracks[this.musicIndex])}
     nextMusic(){this.tracks[this.musicIndex]?.pause();this.musicIndex=(this.musicIndex+1)%MUSIC.length;const a=this.tracks[this.musicIndex];if(a)a.currentTime=0;this.playMusic()}
     stopMusic(){for(const a of this.tracks)a?.pause()}
-    stopVoice(v){if(!v||!this.voices.has(v))return;v.audio.pause();v.audio.removeEventListener('ended',v.finish);v.audio.removeEventListener('error',v.finish);v.audio.removeEventListener('timeupdate',v.tick);this.voices.delete(v);if(this.channels.get(v.channel)===v)this.channels.delete(v.channel)}
+    stopVoice(v){if(!v||!this.voices.has(v))return;v.audio.pause();v.audio.removeEventListener('ended',v.finish);v.audio.removeEventListener('error',v.finish);v.audio.removeEventListener('timeupdate',v.tick);this.voices.delete(v);this.activeAudio.delete(v.audio);if(this.channels.get(v.channel)===v)this.channels.delete(v.channel)}
     stopChannel(channel){const token=this.sequences.get(channel);if(token)token.cancelled=true;this.sequences.delete(channel);this.stopVoice(this.channels.get(channel))}
     stopEffects(){for(const token of this.sequences.values())token.cancelled=true;this.sequences.clear();for(const v of [...this.voices])this.stopVoice(v)}
     effect(key,{channel='',limit=Infinity,gain=1,onEnd=null,loop=false}={}){
-      if(!this.enabled||this.paused||!FILES[key])return null;
+      if(!this.enabled||this.paused||this.master===0||!FILES[key])return null;
+      // A magnet/bonus pickup cluster can otherwise start many media decoders in one tick.
+      const jelly=key.startsWith('jelly');
+      if(jelly){const now=this.now();if(now-this.lastJelly<60)return null;this.lastJelly=now}
       if(channel)this.stopVoice(this.channels.get(channel));
       let pool=this.pools.get(key);if(!pool){pool=[];this.pools.set(key,pool)}
-      let a=pool.find(a=>![...this.voices].some(v=>v.audio===a));
-      if(!a&&pool.length<4){a=this.make(FILES[key]);if(a)pool.push(a)}
-      if(!a){a=pool[0];this.stopVoice([...this.voices].find(v=>v.audio===a))}if(!a)return null;
-      if(this.voices.size>=20){const oldest=[...this.voices].find(v=>!v.suspended&&!v.audio.loop);if(oldest)this.stopVoice(oldest)}
+      let a=pool.find(a=>!this.activeAudio.has(a));
+      if(!a&&pool.length<(jelly?2:4)){a=this.make(FILES[key]);if(a)pool.push(a)}
+      if(!a){a=pool[0];this.stopVoice(this.activeAudio.get(a))}if(!a)return null;
+      if(this.voices.size>=this.maxVoices){let oldest;for(const v of this.voices){if(!v.suspended&&!v.audio.loop){oldest=v;break}}if(oldest)this.stopVoice(oldest);else return null}
       a.currentTime=0;a.volume=this.master*gain;a.loop=loop;
       const v={audio:a,key,channel,gain,finish:null,tick:null};
       v.finish=()=>{if(!this.voices.has(v))return;this.stopVoice(v);onEnd?.()};v.tick=()=>{if(a.currentTime>=limit)v.finish()};
-      a.addEventListener('ended',v.finish);a.addEventListener('error',v.finish);a.addEventListener('timeupdate',v.tick);this.voices.add(v);if(channel)this.channels.set(channel,v);this.play(a);return a;
+      a.addEventListener('ended',v.finish);a.addEventListener('error',v.finish);a.addEventListener('timeupdate',v.tick);this.voices.add(v);this.activeAudio.set(a,v);if(channel)this.channels.set(channel,v);this.play(a);return a;
     }
     sequence(keys,{channel='sequence',limits=[]}={}){
       this.stopChannel(channel);if(!this.enabled||this.paused)return;
@@ -62,7 +67,7 @@
     suspendWorldEffects(){for(const v of this.voices){v.suspended=true;v.audio.pause()}}
     resumeWorldEffects(){for(const v of this.voices){if(v.suspended){v.suspended=false;if(this.enabled&&!this.paused)this.play(v.audio)}}}
     setEnabled(value){this.enabled=!!value;if(!this.enabled){this.stopMusic();this.stopEffects()}else this.playMusic()}
-    startRun(){this.stopEffects();this.stopMusic();this.running=true;this.paused=false;this.musicIndex=0;this.musicFailures=0;for(const a of this.tracks)if(a)a.currentTime=0;this.playMusic()}
+    startRun(){this.stopEffects();this.stopMusic();this.running=true;this.paused=false;this.musicIndex=0;this.musicFailures=0;this.lastJelly=-Infinity;const a=this.tracks[0];if(a)a.currentTime=0;this.playMusic()}
     pause(){this.paused=true;this.stopMusic();for(const v of this.voices)v.audio.pause()}
     resume(){this.paused=false;if(this.enabled){this.playMusic();for(const v of this.voices)if(!v.suspended)this.play(v.audio)}}
     endRun(effect){this.running=false;this.paused=false;this.stopMusic();this.stopEffects();if(effect)this.effect(effect,{channel:'ending'})}
