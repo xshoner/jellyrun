@@ -27,4 +27,18 @@ vm.runInContext(fs.readFileSync('game.js','utf8').replace('get state(){return s}
  sandbox.document.hidden=true;hudWrites=0;for(let i=0;i<120;i++)g.frame(now+=1000/120);assert.equal(paints,0);assert.equal(hudWrites,0);
  sandbox.document.hidden=false;g.start();g.state.pickups=[{type:'jelly',id:1,x:2000,y:500,w:30,h:30}];drawCalls.length=0;g.draw();assert.ok(!drawCalls.some(a=>a[0].path?.startsWith('jelly/')));
  console.log('PASS paused/hidden rendering and offscreen pickup culling');
+ g.start();const before=g.state.t;
+ for(let i=0;i<120;i++)g.sampleRender(1000/60,2);
+ assert.equal(g.renderer.scale,1,'healthy rendering retains full resolution');
+ for(let i=0;i<70;i++)g.sampleRender(1000/30,20);
+ assert.equal(g.renderer.scale,.875);
+ assert.equal(g.renderer.cheapEffects,true);
+ for(let i=0;i<600;i++)g.sampleRender(1000/30,20);
+ assert.equal(g.renderer.scale,.5,'resolution has a readable lower bound');
+ g.draw();assert.equal(element('game').width,640);assert.equal(element('game').height,360);
+ assert.equal(g.state.t,before,'quality changes cannot change simulation time');
+ for(let i=0;i<100;i++)g.acquire(1);
+ assert.ok(g.state.fx.filter(f=>!f.text).length<=120,'burst particles remain bounded');
+ g.draw();
+ console.log('PASS sustained load adaptation, fixed physics and bounded particles');
 })().catch(e=>{console.error(e);process.exitCode=1});

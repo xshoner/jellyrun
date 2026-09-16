@@ -40,3 +40,7 @@ body.game-active:not(.desktop-game) .arena{inset:50% auto auto 50%;margin:0;widt
 .touch{inset:auto 4% 5%;z-index:7}
 .touch button{width:clamp(90px,14vw,150px);height:clamp(48px,8vw,72px);padding:8px;border:2px solid #ffffffc9;border-radius:50%;background:#10272166;color:#fff;font-size:clamp(16px,2.4vw,23px);font-weight:900;letter-spacing:1px;text-shadow:0 2px 4px #000;box-shadow:0 2px 12px #0005}
 .touch button:active{background:#d6ff6377;border-color:#d6ff63}
+/* Progress updates must not trigger layout on the rotated iPhone surface. */
+#energy,#stageProgress{width:100%;transform-origin:left center;transition:transform .15s linear,background .25s}
+.arena.playing{box-shadow:none}
+body.game-active .hero-sprite{animation-play-state:paused}
