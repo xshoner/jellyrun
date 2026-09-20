@@ -42,9 +42,11 @@ const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
 const spriteSourceSizes={player:[1120,1404],run:[1397,341],pirate:[2172,724],ice:[2172,724],barrier:[1122,1402],bomb:[2172,724],trapSingle:[1774,887],trapDouble:[1774,887],batter:[2172,724],goblin:[1358,350],portal:[1774,887]};
 function load(key,path){
  path=path.startsWith('bg_image/')?path.replace('bg_image/','bg_image/optimized/'):'optimized/'+path;
- path=path.replace(/\.png(?:\?.*)?$/,'.webp?v=24');
+ path=path.replace(/\.png(?:\?.*)?$/,'.webp?v=25');
  return new Promise((resolve,reject)=>{
-  const im=new Image();im.onload=()=>{
+  const im=new Image();im.onload=async()=>{
+   // Finish decoding before the first gameplay use, rather than on its draw call.
+   try{await im.decode?.()}catch{};
    const size=spriteSourceSizes[key];
    if(size&&im.naturalWidth){im.sourceScaleX=im.naturalWidth/size[0];im.sourceScaleY=im.naturalHeight/size[1];im.width=size[0];im.height=size[1]}
    assets[key]=im;resolve();
@@ -618,7 +620,14 @@ function frame(now){
  if(s.mode==='ready')decor+=dt*30;
  if(s.mode==='running'||s.mode==='dying'){accumulator+=dt;while(accumulator>=1/120){update(1/120);accumulator-=1/120}}else accumulator=0;
  const changed=s.mode!==lastDrawMode,animated=['ready','running','dying'].includes(s.mode);
- if(changed||(animated&&now>=nextDraw-.5)){draw();lastDrawMode=s.mode;const interval=1000/(s.mode==='ready'?30:60);nextDraw=now+interval-Math.max(0,now-nextDraw)%interval}
+ const interval=1000/(s.mode==='ready'?30:60);
+ // RAF timestamps jitter even on a healthy 60Hz display. Accept a slightly early
+ // callback, but advance the existing deadline: rebasing it to `now` drifts and
+ // can discard every other frame. Late callbacks skip expired deadlines.
+ if(changed||(animated&&now>=nextDraw-2)){
+  draw();lastDrawMode=s.mode;
+  nextDraw=changed?now+interval:nextDraw+interval*Math.max(1,Math.floor((now-nextDraw)/interval)+1);
+ }
  if(changed||(animated&&now>=nextHud)){hud();nextHud=now+100}
  if(elapsed>0&&elapsed<100)sampleRender(elapsed,(globalThis.performance?.now?.()||workStart)-workStart);
  requestAnimationFrame(frame);

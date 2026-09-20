@@ -9,7 +9,7 @@ originalContext.clearRect=()=>paints++;
 element('game').getContext=()=>originalContext;
 Object.defineProperty(element('score'),'textContent',{set(){hudWrites++}});
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('game.js','utf8').replace('get state(){return s},','frame,bg,get state(){return s},'),sandbox);
+vm.runInContext(fs.readFileSync('game.js','utf8').replace('get state(){return s},','resetClock(){last=0;nextDraw=nextHud=0;lastDrawMode="";accumulator=0},frame,bg,get state(){return s},'),sandbox);
 (async()=>{
  await new Promise(setImmediate);const g=sandbox.window.__game;
  let max=0;
@@ -47,4 +47,18 @@ vm.runInContext(fs.readFileSync('game.js','utf8').replace('get state(){return s}
  assert.ok(Math.abs(tiles.at(-1).x+tiles.at(-1).w-(tunnel.x+tunnel.w))<1e-8);
  const effects=g.state.fx;g.acquire(1);g.update(1/120);assert.equal(g.state.fx,effects);
  console.log('PASS tunnel geometry and particle storage are reused without stale positions');
+ // Ideal, perfectly spaced RAF timestamps hid the half-rate regression.
+ for(const hz of [30,59.94,60,90,120,144]){
+  g.start();g.state.nextPattern=Infinity;g.state.nextAmbient=Infinity;
+  g.resetClock();g.frame(now=1000);paints=0;const start=now,before=g.state.t;
+  const frames=Math.round(hz*2);
+  for(let i=1;i<=frames;i++)g.frame(now=start+i*1000/hz+(i%2?.9:-.9));
+  const expected=Math.min(frames,120);
+  assert.ok(Math.abs(paints-expected)<=2,`jittered ${hz}Hz: ${paints}, expected ${expected}`);
+  assert.ok(Math.abs(g.state.t-before-frames/hz)<.02);
+  console.log(`PASS jittered ${hz}Hz: ${paints} paints / 2s; simulation stays in time`);
+ }
+ g.pause();g.frame(now+=20);g.pause();paints=0;
+ for(let i=0;i<60;i++)g.frame(now+=1000/60);
+ assert.ok(paints>=59&&paints<=60,'resume must not retain a stale render deadline');
 })().catch(e=>{console.error(e);process.exitCode=1});

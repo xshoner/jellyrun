@@ -38,11 +38,33 @@ const server=http.createServer((req,res)=>{
    });
    await page.goto(`http://127.0.0.1:${server.address().port}/?test`);
    await page.waitForFunction(()=>!document.getElementById('start').disabled);
+   await page.evaluate(()=>window.__game.soundPlayer.prepared);
+   const hasWebAudio=await page.evaluate(()=>!!window.__game.soundPlayer.context);
+   if(hasWebAudio)assert.equal(await page.evaluate(()=>window.__game.soundPlayer.buffers.size),5);
    const textures=await page.evaluate(()=>window.__loadedImages.map(im=>({url:im.src,w:im.naturalWidth,h:im.naturalHeight})));
    assert.equal(textures.length,37);
-   assert.ok(textures.every(im=>im.w>0&&im.h>0&&im.url.includes('.webp?v=24')));
+   assert.ok(textures.every(im=>im.w>0&&im.h>0&&im.url.includes('.webp?v=25')));
    assert.ok(textures.filter(im=>im.url.includes('bonus_jelly')).every(im=>im.w<=96&&im.h<=96));
    await page.locator('#start').click();
+   if(hasWebAudio){
+   const audioResult=await page.evaluate(async()=>{
+    const a=window.__game.soundPlayer;await a.context.resume();
+    const voice=a.effect('jump',{channel:'audioTest',limit:.1});
+    const buffered=!!voice.buffer,contextState=a.context.state;
+    await new Promise(resolve=>setTimeout(resolve,30));
+    a.pause();const offset=voice.currentTime;
+    await new Promise(resolve=>setTimeout(resolve,50));
+    const held=voice.currentTime===offset;a.resume();
+    await new Promise(resolve=>setTimeout(resolve,200));
+    const ended=!a.channels.has('audioTest');
+    a.stopEffects();
+    return {buffered,contextState,held,ended,bytes:a.bufferBytes,retained:a.voices.size};
+   });
+   assert.ok(audioResult.buffered&&audioResult.held&&audioResult.ended);
+   assert.equal(audioResult.contextState,'running');assert.equal(audioResult.retained,0);
+   assert.ok(audioResult.bytes<=8*1024*1024);
+   console.log('PASS buffered audio',engine.name(),JSON.stringify(audioResult));
+   }else console.log('SKIP buffer playback: this engine build has no Web Audio; exercising media fallback');
    assert.equal(await page.evaluate(()=>window.__game.renderer.scale),.75);
    const result=await page.evaluate(()=>{
     const g=window.__game;g.soundPlayer?.setEnabled(false);

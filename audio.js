@@ -14,18 +14,64 @@
     shock1:'shock01.mp3', shock2:'shock02.mp3', shock3:'shock03.mp3'
   };
   const MUSIC = ['bgm001.mp3','bgm002.mp3','bmg003.mp3','bmg004.mp3','bgm005.mp3'];
+  // These sounds are retriggered many times per second. Decode each once and
+  // mix cheap buffer sources through one context, instead of seeking MP3 players.
+  const BUFFERED = ['jelly1','jelly2','jelly3','jump','slide'];
+  class BufferedEffect {
+    constructor(context,buffer){this.context=context;this.buffer=buffer;this.events=new Map();this.offset=0;this.source=null;this.gain=null;this.level=1;this.loop=false;this.limit=Infinity}
+    addEventListener(key,fn){if(!this.events.has(key))this.events.set(key,new Set());this.events.get(key).add(fn)}
+    removeEventListener(key,fn){this.events.get(key)?.delete(fn)}
+    get paused(){return !this.source}
+    get currentTime(){const time=this.offset+(this.source?this.context.currentTime-this.started:0);return this.loop?time%this.buffer.duration:time}
+    set currentTime(value){this.pause();this.offset=Math.max(0,value)}
+    get volume(){return this.level}
+    set volume(value){this.level=value;if(this.gain)this.gain.gain.value=value}
+    pause(){if(!this.source)return;this.offset=this.currentTime;const source=this.source;this.source=null;source.onended=null;source.stop();source.disconnect();this.gain.disconnect();this.gain=null}
+    play(){
+      if(this.source)return Promise.resolve();
+      const end=Math.min(this.buffer.duration,this.limit);
+      if(!this.loop&&this.offset>=end)this.offset=0;
+      const source=this.context.createBufferSource(),gain=this.context.createGain();
+      source.buffer=this.buffer;source.loop=this.loop;gain.gain.value=this.level;
+      source.connect(gain);gain.connect(this.context.destination);
+      this.source=source;this.gain=gain;this.started=this.context.currentTime;
+      source.onended=()=>{
+        if(this.source!==source)return;
+        this.source=null;this.gain=null;this.offset=end;source.disconnect();gain.disconnect();
+        for(const fn of [...(this.events.get('ended')||[])])fn();
+      };
+      if(this.loop)source.start(0,this.offset);else source.start(0,this.offset,Math.max(.001,end-this.offset));
+      return Promise.resolve();
+    }
+  }
   class GameAudio {
-    constructor({AudioClass=globalThis.Audio,now=()=>globalThis.performance?.now?.()??Date.now()}={}) {
+    constructor({AudioClass=globalThis.Audio,AudioContextClass=globalThis.AudioContext||globalThis.webkitAudioContext,fetchAudio=globalThis.fetch?.bind(globalThis),now=()=>globalThis.performance?.now?.()??Date.now()}={}) {
       this.AudioClass=AudioClass;this.enabled=true;this.master=1;this.running=false;this.paused=false;
       this.musicIndex=0;this.musicFailures=0;this.voices=new Set();this.channels=new Map();this.sequences=new Map();this.pools=new Map();
       this.now=now;this.lastJelly=-Infinity;this.activeAudio=new Map();
       this.maxVoices=globalThis.matchMedia?.('(pointer: coarse)').matches?8:16;
+      this.buffers=new Map();this.context=null;this.bufferBytes=0;this.bufferFailures=[];
+      try{if(AudioContextClass&&fetchAudio)this.context=new AudioContextClass()}catch{}
+      this.prepared=this.prepareBuffers(fetchAudio);
       this.tracks=MUSIC.map(file=>this.make(file,'none'));
       this.tracks.forEach((track,index)=>{if(!track)return;track.volume=.7;track.preload='none';
         track.addEventListener('ended',()=>{if(index!==this.musicIndex)return;this.musicFailures=0;this.nextMusic()});
         track.addEventListener('error',()=>{if(index!==this.musicIndex)return;if(++this.musicFailures<MUSIC.length)this.nextMusic()});
       });
     }
+    async prepareBuffers(fetchAudio){
+      if(!this.context)return;
+      // Sequential decoding avoids a startup burst; a strict budget bounds PCM memory.
+      for(const key of BUFFERED){try{
+        const response=await fetchAudio('bgm/'+encodeURIComponent(FILES[key])+'?v=19');
+        if(!response.ok)continue;
+        const buffer=await this.context.decodeAudioData(await response.arrayBuffer());
+        const bytes=buffer.length*buffer.numberOfChannels*4;
+        if(this.bufferBytes+bytes>8*1024*1024)continue;
+        this.buffers.set(key,buffer);this.bufferBytes+=bytes;
+      }catch(error){this.bufferFailures.push({key,message:String(error?.message||error)});/* Media-element fallback remains available offline or without decoding support. */}}
+    }
+    unlock(){try{this.context?.resume()?.catch?.(()=>{})}catch{}}
     make(file,preload='auto'){if(!this.AudioClass)return null;const a=new this.AudioClass('bgm/'+encodeURIComponent(file)+'?v=19');a.preload=preload;return a}
     play(a){if(!a)return;try{const p=a.play();if(p?.catch)p.catch(()=>{})}catch{}}
     syncVolume(){for(const a of this.tracks)if(a)a.volume=this.master*.7;for(const v of this.voices)v.audio.volume=this.master*v.gain}
@@ -44,10 +90,13 @@
       if(channel)this.stopVoice(this.channels.get(channel));
       let pool=this.pools.get(key);if(!pool){pool=[];this.pools.set(key,pool)}
       let a=pool.find(a=>!this.activeAudio.has(a));
-      if(!a&&pool.length<(jelly?2:4)){a=this.make(FILES[key]);if(a)pool.push(a)}
+      // Upgrade an idle fallback voice once its shared buffer has finished loading.
+      const buffer=this.buffers.get(key);
+      if(a&&buffer&&!(a instanceof BufferedEffect)){const index=pool.indexOf(a);a.pause();a.removeAttribute?.('src');a.load?.();a=new BufferedEffect(this.context,buffer);pool[index]=a}
+      if(!a&&pool.length<(jelly?2:4)){a=buffer?new BufferedEffect(this.context,buffer):this.make(FILES[key]);if(a)pool.push(a)}
       if(!a){a=pool[0];this.stopVoice(this.activeAudio.get(a))}if(!a)return null;
       if(this.voices.size>=this.maxVoices){let oldest;for(const v of this.voices){if(!v.suspended&&!v.audio.loop){oldest=v;break}}if(oldest)this.stopVoice(oldest);else return null}
-      a.currentTime=0;a.volume=this.master*gain;a.loop=loop;
+      a.currentTime=0;a.volume=this.master*gain;a.loop=loop;a.limit=limit;
       const v={audio:a,key,channel,gain,finish:null,tick:null};
       v.finish=()=>{if(!this.voices.has(v))return;this.stopVoice(v);onEnd?.()};v.tick=()=>{if(a.currentTime>=limit)v.finish()};
       a.addEventListener('ended',v.finish);a.addEventListener('error',v.finish);a.addEventListener('timeupdate',v.tick);this.voices.add(v);this.activeAudio.set(a,v);if(channel)this.channels.set(channel,v);this.play(a);return a;
@@ -66,10 +115,10 @@
     }
     suspendWorldEffects(){for(const v of this.voices){v.suspended=true;v.audio.pause()}}
     resumeWorldEffects(){for(const v of this.voices){if(v.suspended){v.suspended=false;if(this.enabled&&!this.paused)this.play(v.audio)}}}
-    setEnabled(value){this.enabled=!!value;if(!this.enabled){this.stopMusic();this.stopEffects()}else this.playMusic()}
-    startRun(){this.stopEffects();this.stopMusic();this.running=true;this.paused=false;this.musicIndex=0;this.musicFailures=0;this.lastJelly=-Infinity;const a=this.tracks[0];if(a)a.currentTime=0;this.playMusic()}
+    setEnabled(value){this.enabled=!!value;if(!this.enabled){this.stopMusic();this.stopEffects()}else{this.unlock();this.playMusic()}}
+    startRun(){this.unlock();this.stopEffects();this.stopMusic();this.running=true;this.paused=false;this.musicIndex=0;this.musicFailures=0;this.lastJelly=-Infinity;const a=this.tracks[0];if(a)a.currentTime=0;this.playMusic()}
     pause(){this.paused=true;this.stopMusic();for(const v of this.voices)v.audio.pause()}
-    resume(){this.paused=false;if(this.enabled){this.playMusic();for(const v of this.voices)if(!v.suspended)this.play(v.audio)}}
+    resume(){this.unlock();this.paused=false;if(this.enabled){this.playMusic();for(const v of this.voices)if(!v.suspended)this.play(v.audio)}}
     endRun(effect){this.running=false;this.paused=false;this.stopMusic();this.stopEffects();if(effect)this.effect(effect,{channel:'ending'})}
   }
   GameAudio.files=FILES;GameAudio.music=MUSIC;window.GameAudio=GameAudio;
