@@ -2,25 +2,33 @@
 (() => {
 const $=id=>document.getElementById(id), canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false});
 const W=1280,H=720,GROUND=610,CELL=120,GRAVITY=2100,FALL_MULTIPLIER=1.15,JUMP_HEIGHT=CELL*2.2*.7,JUMP=Math.sqrt(2*GRAVITY*JUMP_HEIGHT),BASE_SPEED=340;
-// Keep physics in logical coordinates; only the raster workload adapts.
+// Coarse-pointer devices include iPhone and iPad. Their Safari canvas and
+// decoded-image budgets are much tighter, so use the mobile asset set and a
+// 60 Hz fixed step. Swept collision checks keep fast objects reliable.
 const mobileRender=!!globalThis.matchMedia?.('(pointer: coarse)').matches;
-let renderScale=mobileRender ? .75 : 1,cheapEffects=mobileRender,slowFrames=0,qualitySamples=0,qualityTime=0;
+const physicsStep=1/(mobileRender?60:120);
+let renderScale=mobileRender ? .625 : 1,renderFps=60,cheapEffects=mobileRender,slowFrames=0,busyFrames=0,qualitySamples=0,qualityTime=0;
 function configureRenderer(){
  if(canvas.width===Math.round(W*renderScale)&&canvas.height===Math.round(H*renderScale))return;
  canvas.width=Math.round(W*renderScale);canvas.height=Math.round(H*renderScale);
  ctx.setTransform(renderScale,0,0,renderScale,0,0);
 }
 function sampleRender(frameMs,workMs){
- if(s.mode!=='running'){slowFrames=qualitySamples=qualityTime=0;return}
+ if(s.mode!=='running'){slowFrames=busyFrames=qualitySamples=qualityTime=0;return}
  qualitySamples++;qualityTime+=frameMs;
- if(frameMs>22||workMs>14)slowFrames++;
+ if(frameMs>24)slowFrames++;
+ if(workMs>12)busyFrames++;
  if(qualityTime<2000)return;
  // Sustained pressure only: a single load/GC pause must not reduce quality.
- if(slowFrames>qualitySamples*.2){
+ const timingPressure=slowFrames>qualitySamples*.2,workPressure=busyFrames>qualitySamples*.15;
+ if(workPressure&&renderScale>.5){
   cheapEffects=true;
   if(renderScale>.5)renderScale=Math.max(.5,renderScale-.125);
  }
- slowFrames=qualitySamples=qualityTime=0;
+ // A device that cannot deliver 60 Hz gets a stable 30 Hz workload instead
+ // of repeatedly attempting and missing expensive paints.
+ else if(mobileRender&&(timingPressure||workPressure)&&renderFps>30){cheapEffects=true;renderFps=30;nextDraw=0}
+ slowFrames=busyFrames=qualitySamples=qualityTime=0;
 }
 const shadowRadius=value=>cheapEffects?0:value;
 configureRenderer();
@@ -41,8 +49,9 @@ const rand=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v))
 // Source rectangles stay in original sheet coordinates, including fractional cells.
 const spriteSourceSizes={player:[1120,1404],run:[1397,341],pirate:[2172,724],ice:[2172,724],barrier:[1122,1402],bomb:[2172,724],trapSingle:[1774,887],trapDouble:[1774,887],batter:[2172,724],goblin:[1358,350],portal:[1774,887]};
 function load(key,path){
- path=path.startsWith('bg_image/')?path.replace('bg_image/','bg_image/optimized/'):'optimized/'+path;
- path=path.replace(/\.png(?:\?.*)?$/,'.webp?v=25');
+ const mobileFolder=mobileRender?'mobile/':'';
+ path=path.startsWith('bg_image/')?path.replace('bg_image/','bg_image/optimized/'+mobileFolder):'optimized/'+mobileFolder+path;
+ path=path.replace(/\.png(?:\?.*)?$/,'.webp?v=26');
  return new Promise((resolve,reject)=>{
   const im=new Image();im.onload=async()=>{
    // Finish decoding before the first gameplay use, rather than on its draw call.
@@ -347,7 +356,7 @@ function update(dt){if(s.mode==='running'&&s.bonus){updateBonus(dt);return}if(s.
  s.particleTimer-=dt;if(s.particleTimer<=0){s.particleTimer=.045;if(sliding()||s.buff[5]||s.buff[6])burst(p.x-35*p.scale,GROUND-p.y-8,s.buff[5]?'#fff1a0':'#d5e8cc',2)}
  updatePortal(dt);if(s.bonus)return;
  if(s.t>=s.nextBonusJelly){s.nextBonusJelly+=30;if(Math.random()<.3)spawnRareJelly()}
- spawnAmbientJellies();updateFx(dt);s.toast-=dt;if(s.toast<=0)$('toast').style.opacity=0;
+ spawnAmbientJellies();updateFx(dt);if(s.toast>0){s.toast=Math.max(0,s.toast-dt);if(s.toast===0)$('toast').style.opacity=0}
 }
 
 function awardDestruction(x,y){s.score+=20;s.destroyScore+=20;burst(x,y,'#fff2a1',12);floating('+20',x,y,'#fff2a1')}
@@ -511,8 +520,8 @@ const backgroundEdges=new Map();
 function prepareBackgroundEdges(){
  if(!document.createElement)return;
  for(const key of new Set(BACKGROUND_ROUTE)){
-  const im=assets[key],edge=document.createElement('canvas');edge.width=140;edge.height=H;
-  const c=edge.getContext('2d'),width=H*1983/793,scale=Math.max(width/im.width,H/im.height);
+  const im=assets[key],edge=document.createElement('canvas'),edgeScale=mobileRender?renderScale:1;edge.width=Math.round(140*edgeScale);edge.height=Math.round(H*edgeScale);
+  const c=edge.getContext('2d');c.setTransform?.(edgeScale,0,0,edgeScale,0,0);const width=H*1983/793,scale=Math.max(width/im.width,H/im.height);
   const sw=width/scale,sh=H/scale,sx=(im.width-sw)/2,sy=(im.height-sh)/2;
   for(let k=0;k<28;k++){c.globalAlpha=k/28;c.drawImage(im,sx+k*5/scale,sy,5.5/scale,sh,k*5,0,5.5,H)}
   backgroundEdges.set(key,edge);
@@ -520,7 +529,7 @@ function prepareBackgroundEdges(){
 }
 function bg(){if(s.bonus?.phase!=='enter'&&s.bonus){drawBonusBackground();return}const width=H*1983/793,overlapWidth=140,step=width-overlapWidth,offset=(s.bg||decor*.42)%(step*BACKGROUND_ROUTE.length),base=Math.floor(offset/step),shift=offset%step;
  function region(im,x,start,length){const left=Math.max(0,x+start),right=Math.min(W,x+start+length);if(right<=left)return;const scale=Math.max(width/im.width,H/im.height),sw=width/scale,sh=H/scale,sx=(im.width-sw)/2,sy=(im.height-sh)/2;ctx.drawImage(im,sx+(left-x)/scale,sy,(right-left)/scale,sh,left,0,right-left,H)}
- for(let j=-1;j<=2;j++){const key=backgroundKey(base+j),im=assets[key],x=j*step-shift;if(x>=W||x+width<=0)continue;if(j===-1){region(im,x,0,width);continue}region(im,x,overlapWidth,width-overlapWidth);if(x+overlapWidth>0&&x<W){const edge=backgroundEdges.get(key);if(edge)ctx.drawImage(edge,x,0);else for(let k=0;k<28;k++){ctx.globalAlpha=k/28;region(im,x,k*5,5.5)}}ctx.globalAlpha=1}
+ for(let j=-1;j<=2;j++){const key=backgroundKey(base+j),im=assets[key],x=j*step-shift;if(x>=W||x+width<=0)continue;if(j===-1){region(im,x,0,width);continue}region(im,x,overlapWidth,width-overlapWidth);if(x+overlapWidth>0&&x<W){const edge=backgroundEdges.get(key);if(edge)ctx.drawImage(edge,x,0,overlapWidth,H);else for(let k=0;k<28;k++){ctx.globalAlpha=k/28;region(im,x,k*5,5.5)}}ctx.globalAlpha=1}
  const shade=ctx.createLinearGradient(0,0,0,H);shade.addColorStop(0,'#061a2970');shade.addColorStop(.5,'#061a2900');shade.addColorStop(1,'#081b2350');ctx.fillStyle=shade;ctx.fillRect(0,0,W,H);drawRoad()}
 function drawRoad(){
  function road(x,w){if(w<=0)return;ctx.save();ctx.beginPath();ctx.rect(x,GROUND,w,H-GROUND);ctx.clip();ctx.fillStyle='#102c31';ctx.fillRect(x,GROUND,w,H-GROUND);ctx.fillStyle='#bad888';ctx.fillRect(x,GROUND,w,5);ctx.fillStyle='#48715a';ctx.fillRect(x,GROUND+5,w,12);ctx.fillStyle='#ffffff08';for(let t=-(s.distance%100);t<W;t+=100){ctx.fillRect(t,GROUND+35,48,3);ctx.fillRect(t+25,GROUND+75,24,3)}ctx.restore()}
@@ -618,9 +627,9 @@ function frame(now){
  const dt=Math.min(elapsed/1000,.1);last=now;
  if(document.hidden){accumulator=0;nextDraw=nextHud=0;requestAnimationFrame(frame);return}
  if(s.mode==='ready')decor+=dt*30;
- if(s.mode==='running'||s.mode==='dying'){accumulator+=dt;while(accumulator>=1/120){update(1/120);accumulator-=1/120}}else accumulator=0;
+ if(s.mode==='running'||s.mode==='dying'){accumulator+=dt;while(accumulator>=physicsStep){update(physicsStep);accumulator-=physicsStep}}else accumulator=0;
  const changed=s.mode!==lastDrawMode,animated=['ready','running','dying'].includes(s.mode);
- const interval=1000/(s.mode==='ready'?30:60);
+ const interval=1000/(s.mode==='ready'?30:renderFps);
  // RAF timestamps jitter even on a healthy 60Hz display. Accept a slightly early
  // callback, but advance the existing deadline: rebasing it to `now` drifts and
  // can discard every other frame. Late callbacks skip expired deadlines.
@@ -639,5 +648,5 @@ $('jump').addEventListener('pointerdown',e=>{e.preventDefault();jump()});$('slid
 window.addEventListener('jellyrun:restart',start);window.addEventListener('blur',()=>{endSlide();if(s.mode==='running')pause()});document.addEventListener('visibilitychange',()=>{if(document.hidden&&s.mode==='running')pause()});
 Promise.all([load('player','main character.png'),load('run','main character_1.png?v=3'),load('pirate','monster01.png'),load('ice','monster02.png?v=7'),load('bg3alt','bg_image/bg03-1.png?v=6'),load('barrier','barrier1.png'),load('bomb','barrier2.png?v=8'),load('trapSingle','barrier4.png?v=10'),load('trapDouble','barrier5.png?v=10'),load('batter','monster03.png?v=8'),load('goblin','monster04.png?v=13'),load('portal','portal.png?v=13'),load('bonusBg1','bg_image/bonus_bg1.png?v=13'),load('bonusBg2','bg_image/bonus_bg2.png?v=13'),...[1,2,3,4,5].map(i=>load('bonus'+i,'jelly/bonus_jelly'+i+'.png?v=13')),...[1,2,3,4,5,6,7,8,9].map(i=>load('bg'+i,'bg_image/bg0'+i+'.png?v=13')),...[1,2,3].map(i=>load('jelly'+i,'jelly/jelly'+i+'.png')),...[1,2,3,4,5,6].map(i=>load('item'+i,'item/item'+i+'.png'))]).then(()=>{prepareBackgroundEdges();ready=true;$('start').disabled=false;$('start').textContent='지금 달리기 →';requestAnimationFrame(frame)}).catch(e=>{$('start').textContent='에셋 로딩 실패';$('description').textContent='파일을 확인하고 새로고침해 주세요: '+e.message});
 // Explicit opt-in hook for deterministic local gameplay verification.
-if(new URLSearchParams(location.search).has('test'))window.__game={get renderer(){return {scale:renderScale,cheapEffects}},sampleRender,get state(){return s},start,update,jump,acquire,hitPirateFire,updateBurn,invincibilityWarning,spawnGoblin,updateGoblins,spawnPortal,updatePortal,enterBonus,updateBonus,updatePickups,spawnRareJelly,tunnelTiles,returnToApp,finish,damage,box,draw,jellyType,schedule,setSlide:v=>v?beginSlide():endSlide(),constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,pickup,obstaclePool,jellyHeights,nextJellyLayout,bombMotion,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
+if(new URLSearchParams(location.search).has('test'))window.__game={get renderer(){return {scale:renderScale,fps:renderFps,physicsHz:Math.round(1/physicsStep),cheapEffects}},sampleRender,get state(){return s},start,update,jump,acquire,hitPirateFire,updateBurn,invincibilityWarning,spawnGoblin,updateGoblins,spawnPortal,updatePortal,enterBonus,updateBonus,updatePickups,spawnRareJelly,tunnelTiles,returnToApp,finish,damage,box,draw,jellyType,schedule,setSlide:v=>v?beginSlide():endSlide(),constants:{CELL,JUMP,GRAVITY,GROUND,JUMP_HEIGHT,FALL_MULTIPLIER},pause,pattern,spawnPirate,travelDistance,advanceJump,gapBelow,updateGround,nextPatternType,hud,spawnIce,freezePlayer,thawPlayer,iceBeamActive,backgroundKey,spawnBaseball,fireBaseball,hitBaseball,spawnBomb,bombFlashRate,bombBounds,spawnAmbientJellies,requestEncounter,processEncounters,hasSpecialMonster,iceCountdown,soundPlayer,pickup,obstaclePool,jellyHeights,nextJellyLayout,bombMotion,featureConstants:{BOMB_BASE,BOMB_SCALE,TRAP_HEIGHT,TRAP_DROP},iceConstants:{ICE_PREPARE,ICE_LASER,ICE_RECOVER,FREEZE_SECONDS}};
 })();

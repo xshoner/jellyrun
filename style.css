@@ -43,3 +43,4 @@ body.game-active:not(.desktop-game) .arena{inset:50% auto auto 50%;margin:0;widt
 #energy,#stageProgress{width:100%;transform-origin:left center;transition:transform .15s linear,background .25s}
 .arena.playing{box-shadow:none}
 body.game-active .hero-sprite{animation-play-state:paused}
+@media(pointer:coarse){.hero-sprite{background-image:url('optimized/mobile/main character_1.webp?v=26')}}

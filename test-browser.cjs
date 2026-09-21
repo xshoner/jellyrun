@@ -43,8 +43,8 @@ const server=http.createServer((req,res)=>{
    if(hasWebAudio)assert.equal(await page.evaluate(()=>window.__game.soundPlayer.buffers.size),5);
    const textures=await page.evaluate(()=>window.__loadedImages.map(im=>({url:im.src,w:im.naturalWidth,h:im.naturalHeight})));
    assert.equal(textures.length,37);
-   assert.ok(textures.every(im=>im.w>0&&im.h>0&&im.url.includes('.webp?v=25')));
-   assert.ok(textures.filter(im=>im.url.includes('bonus_jelly')).every(im=>im.w<=96&&im.h<=96));
+    assert.ok(textures.every(im=>im.w>0&&im.h>0&&im.url.includes('.webp?v=26')&&im.url.includes('/mobile/')));
+    assert.ok(textures.filter(im=>im.url.includes('bonus_jelly')).every(im=>im.w<=48&&im.h<=48));
    await page.locator('#start').click();
    if(hasWebAudio){
    const audioResult=await page.evaluate(async()=>{
@@ -65,7 +65,7 @@ const server=http.createServer((req,res)=>{
    assert.ok(audioResult.bytes<=8*1024*1024);
    console.log('PASS buffered audio',engine.name(),JSON.stringify(audioResult));
    }else console.log('SKIP buffer playback: this engine build has no Web Audio; exercising media fallback');
-   assert.equal(await page.evaluate(()=>window.__game.renderer.scale),.75);
+    assert.deepEqual(await page.evaluate(()=>({scale:window.__game.renderer.scale,physicsHz:window.__game.renderer.physicsHz})),{scale:.625,physicsHz:60});
    const result=await page.evaluate(()=>{
     const g=window.__game;g.soundPlayer?.setEnabled(false);
     g.state.nextPattern=Infinity;g.state.nextAmbient=Infinity;
@@ -86,9 +86,9 @@ const server=http.createServer((req,res)=>{
     g.start();g.soundPlayer?.setEnabled(false);g.state.nextPattern=Infinity;g.state.nextAmbient=Infinity;
     const y=g.state.p.y;g.jump();g.update(.05);const jumped=g.state.p.y>y;
     g.state.fx=Array.from({length:20},(_,i)=>({text:'+777',color:'#fff1a3',x:300+i*10,y:300,life:1,max:1,vx:0,vy:0}));
-    g.hud();for(let i=0;i<10;i++)g.draw();return {jumped,scale:g.renderer.scale,width:document.getElementById('game').width,energy:getComputedStyle(document.getElementById('energy')).width,scoreGlyphPaints:window.__scoreGlyphPaints};
+     g.hud();for(let i=0;i<10;i++)g.draw();return {jumped,scale:g.renderer.scale,fps:g.renderer.fps,physicsHz:g.renderer.physicsHz,width:document.getElementById('game').width,energy:getComputedStyle(document.getElementById('energy')).width,scoreGlyphPaints:window.__scoreGlyphPaints};
    });
-   assert.ok(result.jumped);assert.equal(result.scale,.5);assert.equal(result.width,640);
+    assert.ok(result.jumped);assert.equal(result.scale,.5);assert.equal(result.fps,30);assert.equal(result.physicsHz,60);assert.equal(result.width,640);
    assert.equal(result.scoreGlyphPaints,1,'repeated score text rasterizes once');
    await page.waitForTimeout(1500);
    await page.locator('#gamePause').click();
